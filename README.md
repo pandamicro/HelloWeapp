@@ -1,2 +1,3 @@
-# hello-world
-Hello world new project template.
+# Hello Weapp
+
+Weapp demo created with Cocos Creator
