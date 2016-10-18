@@ -1,0 +1,2 @@
+<!--index.wxml-->
+<canvas id="cocosCanvas" canvas-id="cocosCanvas" catchtouchstart="handleTouchEvent" catchtouchmove="handleTouchEvent" catchtouchend="handleTouchEvent" catchtouchcancel="handleTouchEvent" width="480px" height="640px"/>

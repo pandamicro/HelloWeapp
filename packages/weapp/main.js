@@ -9,7 +9,7 @@ var templateDir = Editor.url('packages://weapp/');
 
 // TODO: modify it to your own path
 // The wechat app project destination with page sub path for the cocos game
-var exportDir = path.join(Editor.projectInfo.path, '../../Weapps/hellococos/pages/index/');
+var exportDir = path.join(Editor.projectInfo.path, 'hellococos/pages/index/');
 
 var paths = exportDir.split(path.sep);
 var projectName = paths[paths.length-1];
