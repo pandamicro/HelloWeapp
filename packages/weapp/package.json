@@ -1,0 +1,12 @@
+{
+  "name": "weapp-project",
+  "version": "0.1",
+  "description": "微信小程序项目更新插件",
+  "author": "pandamicro",
+  "main": "main.js",
+  "main-menu": {
+    "weapp/Publish to weapp": {
+      "message": "weapp-project:publish"
+    }
+  }
+}

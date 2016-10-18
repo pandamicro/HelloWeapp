@@ -81,8 +81,8 @@ var _ccsg = global._ccsg;
             };
         })();
     }, {
-        "./cocos2d/core/platform/CCSys": 71,
-        "./cocos2d/core/utils": 96
+        "./cocos2d/core/platform/CCSys": 76,
+        "./cocos2d/core/utils": 101
     } ],
     2: [ function(require, module, exports) {
         cc._LogInfos = {
@@ -361,7 +361,7 @@ var _ccsg = global._ccsg;
             };
         };
     }, {
-        "./cocos2d/core/value-types/CCEnum": 103
+        "./cocos2d/core/value-types/CCEnum": 108
     } ],
     3: [ function(require, module, exports) {
         (function(cc, _ccsg) {
@@ -1771,1034 +1771,6 @@ var _ccsg = global._ccsg;
                     this._ignoreAnchorPointForPosition = true;
                     this.setAnchorPoint(.5, .5);
                     this.setContentSize(cc.director.getWinSize());
-                }
-            });
-            cc.LoaderScene = _ccsg.Scene.extend({
-                _interval: null,
-                _label: null,
-                _className: "LoaderScene",
-                _onProjectionChange: null,
-                cb: null,
-                target: null,
-                init: function() {
-                    var self = this;
-                    var logoWidth = 160;
-                    var logoHeight = 200;
-                    var bgLayer = self._bgLayer = new cc.LayerColor(cc.color(32, 32, 32, 255));
-                    self.addChild(bgLayer, 0);
-                    var fontSize = 24, lblHeight = -logoHeight / 2 + 100;
-                    if (cc._loaderImage) {
-                        var img = new Image();
-                        img.src = cc._loaderImage;
-                        logoWidth = img.width;
-                        logoHeight = img.height;
-                        self._initStage(img, cc.visibleRect.center);
-                        fontSize = 14;
-                        lblHeight = -logoHeight / 2 - 10;
-                    }
-                    var label = self._label = new cc.LabelTTF("Loading... 0%", "Arial", fontSize);
-                    label.setPosition(cc.pAdd(cc.visibleRect.center, cc.p(0, lblHeight)));
-                    label.setColor(cc.color(180, 180, 180));
-                    bgLayer.addChild(this._label, 10);
-                    return true;
-                },
-                _initStage: function(img, centerPos) {
-                    var self = this;
-                    var texture2d = self._texture2d = new cc.Texture2D();
-                    texture2d.initWithElement(img);
-                    texture2d.handleLoadedTexture();
-                    var logo = self._logo = new _ccsg.Sprite(texture2d);
-                    logo.x = centerPos.x;
-                    logo.y = centerPos.y;
-                    self._bgLayer.addChild(logo, 10);
-                },
-                onEnter: function() {
-                    var self = this;
-                    _ccsg.Node.prototype.onEnter.call(self);
-                    self.schedule(self._startLoading, .3);
-                    this._onProjectionChange = function() {
-                        self._updateTransform();
-                    };
-                    cc.director.on(cc.Director.EVENT_PROJECTION_CHANGED, this._onProjectionChange);
-                },
-                onExit: function() {
-                    cc.director.off(cc.Director.EVENT_PROJECTION_CHANGED, this._onProjectionChange);
-                    _ccsg.Node.prototype.onExit.call(this);
-                    var tmpStr = "Loading... 0%";
-                    this._label.setString(tmpStr);
-                },
-                initWithResources: function(resources, cb, target) {
-                    cc.js.isString(resources) && (resources = [ resources ]);
-                    this.resources = resources || [];
-                    this.cb = cb;
-                    this.target = target;
-                },
-                _startLoading: function() {
-                    var self = this;
-                    self.unschedule(self._startLoading);
-                    var res = self.resources;
-                    cc.loader.load(res, function(loadedCount, count) {
-                        var percent = loadedCount / count * 100 | 0;
-                        percent = Math.min(percent, 100);
-                        self._label.setString("Loading... " + percent + "%");
-                    }, function(error, items) {
-                        self.cb && self.cb.call(self.target, error, items);
-                    });
-                },
-                _updateTransform: function() {
-                    this._renderCmd.setDirtyFlag(_ccsg.Node._dirtyFlags.transformDirty);
-                    this._bgLayer._renderCmd.setDirtyFlag(_ccsg.Node._dirtyFlags.transformDirty);
-                    this._label._renderCmd.setDirtyFlag(_ccsg.Node._dirtyFlags.transformDirty);
-                    this._logo._renderCmd.setDirtyFlag(_ccsg.Node._dirtyFlags.transformDirty);
-                }
-            });
-            cc.LoaderScene.preload = function(resources, cb, target) {
-                var _cc = cc;
-                if (!_cc.loaderScene) {
-                    _cc.loaderScene = new cc.LoaderScene();
-                    _cc.loaderScene.init();
-                }
-                _cc.loaderScene.initWithResources(resources, cb, target);
-                cc.director.runScene(_cc.loaderScene);
-                return _cc.loaderScene;
-            };
-            cc.Layer = _ccsg.Node.extend({
-                _className: "Layer",
-                ctor: function() {
-                    _ccsg.Node.prototype.ctor.call(this);
-                    this._ignoreAnchorPointForPosition = true;
-                    this.setAnchorPoint(.5, .5);
-                    this.setContentSize(cc.winSize);
-                },
-                init: function() {
-                    var _t = this;
-                    _t._ignoreAnchorPointForPosition = true;
-                    _t.setAnchorPoint(.5, .5);
-                    _t.setContentSize(cc.winSize);
-                    _t._cascadeColorEnabled = false;
-                    _t._cascadeOpacityEnabled = false;
-                    return true;
-                },
-                bake: function() {
-                    this._renderCmd.bake();
-                },
-                unbake: function() {
-                    this._renderCmd.unbake();
-                },
-                isBaked: function() {
-                    return this._renderCmd._isBaked;
-                },
-                addChild: function(child, localZOrder, tag) {
-                    _ccsg.Node.prototype.addChild.call(this, child, localZOrder, tag);
-                    this._renderCmd._bakeForAddChild(child);
-                },
-                _createRenderCmd: function() {
-                    return cc._renderType === cc.game.RENDER_TYPE_CANVAS ? new cc.Layer.CanvasRenderCmd(this) : new cc.Layer.WebGLRenderCmd(this);
-                }
-            });
-            cc.LayerColor = cc.Layer.extend({
-                _blendFunc: null,
-                _className: "LayerColor",
-                getBlendFunc: function() {
-                    return this._blendFunc;
-                },
-                changeWidthAndHeight: function(w, h) {
-                    this.width = w;
-                    this.height = h;
-                },
-                changeWidth: function(w) {
-                    this.width = w;
-                },
-                changeHeight: function(h) {
-                    this.height = h;
-                },
-                setOpacityModifyRGB: function(value) {},
-                isOpacityModifyRGB: function() {
-                    return false;
-                },
-                ctor: function(color, width, height) {
-                    cc.Layer.prototype.ctor.call(this);
-                    this._blendFunc = new cc.BlendFunc(cc.macro.SRC_ALPHA, cc.macro.ONE_MINUS_SRC_ALPHA);
-                    cc.LayerColor.prototype.init.call(this, color, width, height);
-                },
-                init: function(color, width, height) {
-                    cc._renderType !== cc.game.RENDER_TYPE_CANVAS && (this.shaderProgram = cc.shaderCache.programForKey(cc.macro.SHADER_POSITION_COLOR));
-                    var winSize = cc.director.getWinSize();
-                    color = color || cc.color(0, 0, 0, 255);
-                    width = void 0 === width ? winSize.width : width;
-                    height = void 0 === height ? winSize.height : height;
-                    var locRealColor = this._realColor;
-                    locRealColor.r = color.r;
-                    locRealColor.g = color.g;
-                    locRealColor.b = color.b;
-                    this._realOpacity = color.a;
-                    this._renderCmd.setDirtyFlag(_ccsg.Node._dirtyFlags.colorDirty | _ccsg.Node._dirtyFlags.opacityDirty);
-                    cc.LayerColor.prototype.setContentSize.call(this, width, height);
-                    return true;
-                },
-                setBlendFunc: function(src, dst) {
-                    var locBlendFunc = this._blendFunc;
-                    if (void 0 === dst) {
-                        locBlendFunc.src = src.src;
-                        locBlendFunc.dst = src.dst;
-                    } else {
-                        locBlendFunc.src = src;
-                        locBlendFunc.dst = dst;
-                    }
-                    this._renderCmd.updateBlendFunc(locBlendFunc);
-                },
-                _createRenderCmd: function() {
-                    return cc._renderType === cc.game.RENDER_TYPE_CANVAS ? new cc.LayerColor.CanvasRenderCmd(this) : new cc.LayerColor.WebGLRenderCmd(this);
-                }
-            });
-            (function() {
-                var proto = cc.LayerColor.prototype;
-                cc.defineGetterSetter(proto, "width", proto._getWidth, proto._setWidth);
-                cc.defineGetterSetter(proto, "height", proto._getHeight, proto._setHeight);
-            })();
-            cc.LayerGradient = cc.LayerColor.extend({
-                _endColor: null,
-                _startOpacity: 255,
-                _endOpacity: 255,
-                _alongVector: null,
-                _compressedInterpolation: false,
-                _className: "LayerGradient",
-                _colorStops: [],
-                ctor: function(start, end, v, stops) {
-                    cc.LayerColor.prototype.ctor.call(this);
-                    this._endColor = cc.color(0, 0, 0, 255);
-                    this._alongVector = cc.p(0, -1);
-                    this._startOpacity = 255;
-                    this._endOpacity = 255;
-                    if (stops && stops instanceof Array) {
-                        this._colorStops = stops;
-                        stops.splice(0, 0, {
-                            p: 0,
-                            color: start || cc.Color.BLACK
-                        });
-                        stops.push({
-                            p: 1,
-                            color: end || cc.Color.BLACK
-                        });
-                    } else {
-                        this._colorStops = [ {
-                            p: 0,
-                            color: start || cc.Color.BLACK
-                        }, {
-                            p: 1,
-                            color: end || cc.Color.BLACK
-                        } ];
-                    }
-                    cc.LayerGradient.prototype.init.call(this, start, end, v, stops);
-                },
-                init: function(start, end, v, stops) {
-                    start = start || cc.color(0, 0, 0, 255);
-                    end = end || cc.color(0, 0, 0, 255);
-                    v = v || cc.p(0, -1);
-                    var _t = this;
-                    var locEndColor = _t._endColor;
-                    _t._startOpacity = start.a;
-                    locEndColor.r = end.r;
-                    locEndColor.g = end.g;
-                    locEndColor.b = end.b;
-                    _t._endOpacity = end.a;
-                    _t._alongVector = v;
-                    _t._compressedInterpolation = true;
-                    cc.LayerColor.prototype.init.call(_t, cc.color(start.r, start.g, start.b, 255));
-                    this._renderCmd.setDirtyFlag(_ccsg.Node._dirtyFlags.colorDirty | _ccsg.Node._dirtyFlags.opacityDirty | _ccsg.Node._dirtyFlags.gradientDirty);
-                    return true;
-                },
-                setContentSize: function(size, height) {
-                    cc.LayerColor.prototype.setContentSize.call(this, size, height);
-                    this._renderCmd.setDirtyFlag(_ccsg.Node._dirtyFlags.gradientDirty);
-                },
-                _setWidth: function(width) {
-                    cc.LayerColor.prototype._setWidth.call(this, width);
-                    this._renderCmd.setDirtyFlag(_ccsg.Node._dirtyFlags.gradientDirty);
-                },
-                _setHeight: function(height) {
-                    cc.LayerColor.prototype._setHeight.call(this, height);
-                    this._renderCmd.setDirtyFlag(_ccsg.Node._dirtyFlags.gradientDirty);
-                },
-                getStartColor: function() {
-                    return cc.color(this._realColor);
-                },
-                setStartColor: function(color) {
-                    this.color = color;
-                    var stops = this._colorStops;
-                    if (stops && stops.length > 0) {
-                        var selColor = stops[0].color;
-                        selColor.r = color.r;
-                        selColor.g = color.g;
-                        selColor.b = color.b;
-                    }
-                },
-                setEndColor: function(color) {
-                    var locColor = this._endColor;
-                    locColor.r = color.r;
-                    locColor.g = color.g;
-                    locColor.b = color.b;
-                    var stops = this._colorStops;
-                    if (stops && stops.length > 0) {
-                        var selColor = stops[stops.length - 1].color;
-                        selColor.r = color.r;
-                        selColor.g = color.g;
-                        selColor.b = color.b;
-                    }
-                    this._renderCmd.setDirtyFlag(_ccsg.Node._dirtyFlags.colorDirty);
-                },
-                getEndColor: function() {
-                    return cc.color(this._endColor);
-                },
-                setStartOpacity: function(o) {
-                    this._startOpacity = o;
-                    var stops = this._colorStops;
-                    stops && stops.length > 0 && (stops[0].color.a = o);
-                    this._renderCmd.setDirtyFlag(_ccsg.Node._dirtyFlags.opacityDirty);
-                },
-                getStartOpacity: function() {
-                    return this._startOpacity;
-                },
-                setEndOpacity: function(o) {
-                    this._endOpacity = o;
-                    var stops = this._colorStops;
-                    stops && stops.length > 0 && (stops[stops.length - 1].color.a = o);
-                    this._renderCmd.setDirtyFlag(_ccsg.Node._dirtyFlags.opacityDirty);
-                },
-                getEndOpacity: function() {
-                    return this._endOpacity;
-                },
-                setVector: function(Var) {
-                    this._alongVector.x = Var.x;
-                    this._alongVector.y = Var.y;
-                    this._renderCmd.setDirtyFlag(_ccsg.Node._dirtyFlags.gradientDirty);
-                },
-                getVector: function() {
-                    return cc.p(this._alongVector.x, this._alongVector.y);
-                },
-                isCompressedInterpolation: function() {
-                    return this._compressedInterpolation;
-                },
-                setCompressedInterpolation: function(compress) {
-                    this._compressedInterpolation = compress;
-                    this._renderCmd.setDirtyFlag(_ccsg.Node._dirtyFlags.gradientDirty);
-                },
-                getColorStops: function() {
-                    return this._colorStops;
-                },
-                setColorStops: function(colorStops) {
-                    this._colorStops = colorStops;
-                    this._renderCmd.setDirtyFlag(_ccsg.Node._dirtyFlags.colorDirty | _ccsg.Node._dirtyFlags.opacityDirty | _ccsg.Node._dirtyFlags.gradientDirty);
-                },
-                _createRenderCmd: function() {
-                    return cc._renderType === cc.game.RENDER_TYPE_CANVAS ? new cc.LayerGradient.CanvasRenderCmd(this) : new cc.LayerGradient.WebGLRenderCmd(this);
-                }
-            });
-            (function() {
-                var proto = cc.LayerGradient.prototype;
-                proto.startColor;
-                cc.defineGetterSetter(proto, "startColor", proto.getStartColor, proto.setStartColor);
-                proto.endColor;
-                cc.defineGetterSetter(proto, "endColor", proto.getEndColor, proto.setEndColor);
-                proto.startOpacity;
-                cc.defineGetterSetter(proto, "startOpacity", proto.getStartOpacity, proto.setStartOpacity);
-                proto.endOpacity;
-                cc.defineGetterSetter(proto, "endOpacity", proto.getEndOpacity, proto.setEndOpacity);
-                proto.vector;
-                cc.defineGetterSetter(proto, "vector", proto.getVector, proto.setVector);
-                proto.colorStops;
-                cc.defineGetterSetter(proto, "colorStops", proto.getColorStops, proto.setColorStops);
-            })();
-            cc.LayerMultiplex = cc.Layer.extend({
-                _enabledLayer: 0,
-                _layers: null,
-                _className: "LayerMultiplex",
-                ctor: function(layers) {
-                    cc.Layer.prototype.ctor.call(this);
-                    layers instanceof Array ? cc.LayerMultiplex.prototype.initWithLayers.call(this, layers) : cc.LayerMultiplex.prototype.initWithLayers.call(this, Array.prototype.slice.call(arguments));
-                },
-                initWithLayers: function(layers) {
-                    layers.length > 0 && null == layers[layers.length - 1] && cc.log(cc._LogInfos.LayerMultiplex.initWithLayers);
-                    this._layers = layers;
-                    this._enabledLayer = 0;
-                    this.addChild(this._layers[this._enabledLayer]);
-                    return true;
-                },
-                switchTo: function(n) {
-                    if (n >= this._layers.length) {
-                        cc.log(cc._LogInfos.LayerMultiplex.switchTo);
-                        return;
-                    }
-                    this.removeChild(this._layers[this._enabledLayer], true);
-                    this._enabledLayer = n;
-                    this.addChild(this._layers[n]);
-                },
-                switchToAndReleaseMe: function(n) {
-                    if (n >= this._layers.length) {
-                        cc.log(cc._LogInfos.LayerMultiplex.switchToAndReleaseMe);
-                        return;
-                    }
-                    this.removeChild(this._layers[this._enabledLayer], true);
-                    this._layers[this._enabledLayer] = null;
-                    this._enabledLayer = n;
-                    this.addChild(this._layers[n]);
-                },
-                addLayer: function(layer) {
-                    if (!layer) {
-                        cc.log(cc._LogInfos.LayerMultiplex.addLayer);
-                        return;
-                    }
-                    this._layers.push(layer);
-                }
-            });
-            (function() {
-                cc.Layer.CanvasRenderCmd = function(renderable) {
-                    _ccsg.Node.CanvasRenderCmd.call(this, renderable);
-                    this._isBaked = false;
-                    this._bakeSprite = null;
-                    this._updateCache = 2;
-                };
-                var proto = cc.Layer.CanvasRenderCmd.prototype = Object.create(_ccsg.Node.CanvasRenderCmd.prototype);
-                proto.constructor = cc.Layer.CanvasRenderCmd;
-                proto._setCacheDirty = function(child) {
-                    child && 0 === this._updateCache && (this._updateCache = 2);
-                    if (false === this._cacheDirty) {
-                        this._cacheDirty = true;
-                        var cachedP = this._cachedParent;
-                        cachedP && cachedP !== this && cachedP._setNodeDirtyForCache && cachedP._setNodeDirtyForCache();
-                    }
-                };
-                proto.updateStatus = function() {
-                    var flags = _ccsg.Node._dirtyFlags, locFlag = this._dirtyFlag;
-                    if (locFlag & flags.orderDirty) {
-                        this._cacheDirty = true;
-                        0 === this._updateCache && (this._updateCache = 2);
-                        this._dirtyFlag &= ~flags.orderDirty;
-                    }
-                    _ccsg.Node.RenderCmd.prototype.updateStatus.call(this);
-                };
-                proto._syncStatus = function(parentCmd) {
-                    var flags = _ccsg.Node._dirtyFlags, locFlag = this._dirtyFlag;
-                    if (locFlag & flags.orderDirty) {
-                        this._cacheDirty = true;
-                        0 === this._updateCache && (this._updateCache = 2);
-                        this._dirtyFlag &= ~flags.orderDirty;
-                    }
-                    _ccsg.Node.RenderCmd.prototype._syncStatus.call(this, parentCmd);
-                };
-                proto.transform = function(parentCmd, recursive) {
-                    var wt = this._worldTransform;
-                    var a = wt.a, b = wt.b, c = wt.c, d = wt.d;
-                    _ccsg.Node.CanvasRenderCmd.prototype.transform.call(this, parentCmd, recursive);
-                    wt.a === a && wt.b === b && wt.c === c && wt.d === d || 0 !== this._updateCache || (this._updateCache = 2);
-                };
-                proto.bake = function() {
-                    if (!this._isBaked) {
-                        this._needDraw = true;
-                        this._isBaked = this._cacheDirty = true;
-                        0 === this._updateCache && (this._updateCache = 2);
-                        var children = this._node._children;
-                        for (var i = 0, len = children.length; i < len; i++) {
-                            children[i]._renderCmd._setCachedParent(this);
-                        }
-                        if (!this._bakeSprite) {
-                            this._bakeSprite = new cc.BakeSprite();
-                            this._bakeSprite.setAnchorPoint(0, 0);
-                        }
-                    }
-                };
-                proto.unbake = function() {
-                    if (this._isBaked) {
-                        this._needDraw = false;
-                        this._isBaked = false;
-                        this._cacheDirty = true;
-                        0 === this._updateCache && (this._updateCache = 2);
-                        var children = this._node._children;
-                        for (var i = 0, len = children.length; i < len; i++) {
-                            children[i]._renderCmd._setCachedParent(null);
-                        }
-                    }
-                };
-                proto.isBaked = function() {
-                    return this._isBaked;
-                };
-                proto.rendering = function() {
-                    if (this._cacheDirty) {
-                        var node = this._node;
-                        var children = node._children, locBakeSprite = this._bakeSprite;
-                        this.transform(this.getParentRenderCmd(), true);
-                        var boundingBox = this._getBoundingBoxForBake();
-                        boundingBox.width = 0 | boundingBox.width + .5;
-                        boundingBox.height = 0 | boundingBox.height + .5;
-                        var bakeContext = locBakeSprite.getCacheContext();
-                        var ctx = bakeContext.getContext();
-                        locBakeSprite.setPosition(boundingBox.x, boundingBox.y);
-                        if (this._updateCache > 0) {
-                            locBakeSprite.resetCanvasSize(boundingBox.width, boundingBox.height);
-                            bakeContext.setOffset(0 - boundingBox.x, ctx.canvas.height - boundingBox.height + boundingBox.y);
-                            node.sortAllChildren();
-                            cc.renderer._turnToCacheMode(this.__instanceId);
-                            for (var i = 0, len = children.length; i < len; i++) {
-                                children[i].visit(this);
-                            }
-                            cc.renderer._renderingToCacheCanvas(bakeContext, this.__instanceId);
-                            locBakeSprite.transform();
-                            this._updateCache--;
-                        }
-                        this._cacheDirty = false;
-                    }
-                };
-                proto.visit = function(parentCmd) {
-                    if (!this._isBaked) {
-                        this.originVisit(parentCmd);
-                        return;
-                    }
-                    var node = this._node, children = node._children;
-                    var len = children.length;
-                    this._propagateFlagsDown(parentCmd);
-                    if (!node._visible || 0 === len) {
-                        return;
-                    }
-                    this._syncStatus(parentCmd);
-                    cc.renderer.pushRenderCommand(this);
-                    this._bakeSprite.visit(this);
-                    this._dirtyFlag = 0;
-                };
-                proto._bakeForAddChild = function(child) {
-                    child._parent === this._node && this._isBaked && child._renderCmd._setCachedParent(this);
-                };
-                proto._getBoundingBoxForBake = function() {
-                    var rect = null, node = this._node;
-                    if (!node._children || 0 === node._children.length) {
-                        return cc.rect(0, 0, 10, 10);
-                    }
-                    var trans = node.getNodeToWorldTransform();
-                    var locChildren = node._children;
-                    for (var i = 0, len = locChildren.length; i < len; i++) {
-                        var child = locChildren[i];
-                        if (child && child._visible) {
-                            if (rect) {
-                                var childRect = child._getBoundingBoxToCurrentNode(trans);
-                                childRect && (rect = cc.rectUnion(rect, childRect));
-                            } else {
-                                rect = child._getBoundingBoxToCurrentNode(trans);
-                            }
-                        }
-                    }
-                    return rect;
-                };
-            })();
-            (function() {
-                cc.LayerColor.CanvasRenderCmd = function(renderable) {
-                    cc.Layer.CanvasRenderCmd.call(this, renderable);
-                    this._needDraw = true;
-                    this._blendFuncStr = "source-over";
-                    this._bakeRenderCmd = new cc.CustomRenderCmd(this, this._bakeRendering);
-                };
-                var proto = cc.LayerColor.CanvasRenderCmd.prototype = Object.create(cc.Layer.CanvasRenderCmd.prototype);
-                proto.constructor = cc.LayerColor.CanvasRenderCmd;
-                proto.unbake = function() {
-                    cc.Layer.CanvasRenderCmd.prototype.unbake.call(this);
-                    this._needDraw = true;
-                };
-                proto.rendering = function(ctx, scaleX, scaleY) {
-                    var wrapper = ctx || cc._renderContext, context = wrapper.getContext(), node = this._node, curColor = this._displayedColor, opacity = this._displayedOpacity / 255, locWidth = node._contentSize.width, locHeight = node._contentSize.height;
-                    if (0 === opacity) {
-                        return;
-                    }
-                    wrapper.setCompositeOperation(this._blendFuncStr);
-                    wrapper.setGlobalAlpha(opacity);
-                    wrapper.setFillStyle("rgba(" + (0 | curColor.r) + "," + (0 | curColor.g) + "," + (0 | curColor.b) + ", 1)");
-                    wrapper.setTransform(this._worldTransform, scaleX, scaleY);
-                    context.fillRect(0, 0, locWidth, -locHeight);
-                    cc.g_NumberOfDraws++;
-                };
-                proto.updateBlendFunc = function(blendFunc) {
-                    this._blendFuncStr = _ccsg.Node.CanvasRenderCmd._getCompositeOperationByBlendFunc(blendFunc);
-                };
-                proto._updateSquareVertices = proto._updateSquareVerticesWidth = proto._updateSquareVerticesHeight = function() {};
-                proto._bakeRendering = function() {
-                    if (this._cacheDirty) {
-                        var node = this._node;
-                        var locBakeSprite = this._bakeSprite, children = node._children;
-                        var len = children.length, i;
-                        this.transform(this.getParentRenderCmd(), true);
-                        var boundingBox = this._getBoundingBoxForBake();
-                        boundingBox.width = 0 | boundingBox.width + .5;
-                        boundingBox.height = 0 | boundingBox.height + .5;
-                        var bakeContext = locBakeSprite.getCacheContext();
-                        var ctx = bakeContext.getContext();
-                        locBakeSprite.setPosition(boundingBox.x, boundingBox.y);
-                        if (this._updateCache > 0) {
-                            ctx.fillStyle = bakeContext._currentFillStyle;
-                            locBakeSprite.resetCanvasSize(boundingBox.width, boundingBox.height);
-                            bakeContext.setOffset(0 - boundingBox.x, ctx.canvas.height - boundingBox.height + boundingBox.y);
-                            var child;
-                            cc.renderer._turnToCacheMode(this.__instanceId);
-                            if (len > 0) {
-                                node.sortAllChildren();
-                                for (i = 0; i < len; i++) {
-                                    child = children[i];
-                                    if (!(child._localZOrder < 0)) {
-                                        break;
-                                    }
-                                    child._renderCmd.visit(this);
-                                }
-                                cc.renderer.pushRenderCommand(this);
-                                for (;i < len; i++) {
-                                    children[i]._renderCmd.visit(this);
-                                }
-                            } else {
-                                cc.renderer.pushRenderCommand(this);
-                            }
-                            cc.renderer._renderingToCacheCanvas(bakeContext, this.__instanceId);
-                            locBakeSprite.transform();
-                            this._updateCache--;
-                        }
-                        this._cacheDirty = false;
-                    }
-                };
-                proto.visit = function(parentCmd) {
-                    if (!this._isBaked) {
-                        this.originVisit();
-                        return;
-                    }
-                    var node = this._node;
-                    this._propagateFlagsDown(parentCmd);
-                    if (!node._visible) {
-                        return;
-                    }
-                    this._syncStatus(parentCmd);
-                    cc.renderer.pushRenderCommand(this._bakeRenderCmd);
-                    this._bakeSprite._renderCmd.setDirtyFlag(_ccsg.Node._dirtyFlags.transformDirty);
-                    this._bakeSprite.visit(this);
-                    this._dirtyFlag = 0;
-                };
-                proto._getBoundingBoxForBake = function() {
-                    var node = this._node;
-                    var rect = cc.rect(0, 0, node._contentSize.width, node._contentSize.height);
-                    var trans = node.getNodeToWorldTransform();
-                    rect = cc.rectApplyAffineTransform(rect, node.getNodeToWorldTransform());
-                    if (!node._children || 0 === node._children.length) {
-                        return rect;
-                    }
-                    var locChildren = node._children;
-                    for (var i = 0; i < locChildren.length; i++) {
-                        var child = locChildren[i];
-                        if (child && child._visible) {
-                            var childRect = child._getBoundingBoxToCurrentNode(trans);
-                            rect = cc.rectUnion(rect, childRect);
-                        }
-                    }
-                    return rect;
-                };
-            })();
-            (function() {
-                cc.LayerGradient.CanvasRenderCmd = function(renderable) {
-                    cc.LayerColor.CanvasRenderCmd.call(this, renderable);
-                    this._needDraw = true;
-                    this._startPoint = cc.p(0, 0);
-                    this._endPoint = cc.p(0, 0);
-                    this._startStopStr = null;
-                    this._endStopStr = null;
-                };
-                var proto = cc.LayerGradient.CanvasRenderCmd.prototype = Object.create(cc.LayerColor.CanvasRenderCmd.prototype);
-                proto.constructor = cc.LayerGradient.CanvasRenderCmd;
-                proto.rendering = function(ctx, scaleX, scaleY) {
-                    var wrapper = ctx || cc._renderContext, context = wrapper.getContext(), node = this._node, opacity = this._displayedOpacity / 255;
-                    if (0 === opacity) {
-                        return;
-                    }
-                    var locWidth = node._contentSize.width, locHeight = node._contentSize.height;
-                    wrapper.setCompositeOperation(this._blendFuncStr);
-                    wrapper.setGlobalAlpha(opacity);
-                    var gradient = context.createLinearGradient(this._startPoint.x, this._startPoint.y, this._endPoint.x, this._endPoint.y);
-                    if (node._colorStops) {
-                        for (var i = 0; i < node._colorStops.length; i++) {
-                            var stop = node._colorStops[i];
-                            gradient.addColorStop(stop.p, this._colorStopsStr[i]);
-                        }
-                    } else {
-                        gradient.addColorStop(0, this._startStopStr);
-                        gradient.addColorStop(1, this._endStopStr);
-                    }
-                    wrapper.setFillStyle(gradient);
-                    wrapper.setTransform(this._worldTransform, scaleX, scaleY);
-                    context.fillRect(0, 0, locWidth, -locHeight);
-                    cc.g_NumberOfDraws++;
-                };
-                proto.updateStatus = function() {
-                    var flags = _ccsg.Node._dirtyFlags, locFlag = this._dirtyFlag;
-                    if (locFlag & flags.gradientDirty) {
-                        this._dirtyFlag |= flags.colorDirty;
-                        this._dirtyFlag &= ~flags.gradientDirty;
-                    }
-                    _ccsg.Node.RenderCmd.prototype.updateStatus.call(this);
-                };
-                proto._syncStatus = function(parentCmd) {
-                    var flags = _ccsg.Node._dirtyFlags, locFlag = this._dirtyFlag;
-                    if (locFlag & flags.gradientDirty) {
-                        this._dirtyFlag |= flags.colorDirty;
-                        this._dirtyFlag &= ~flags.gradientDirty;
-                    }
-                    _ccsg.Node.RenderCmd.prototype._syncStatus.call(this, parentCmd);
-                };
-                proto._updateColor = function() {
-                    var node = this._node;
-                    var contentSize = node._contentSize;
-                    var tWidth = .5 * contentSize.width, tHeight = .5 * contentSize.height;
-                    var angle = cc.pAngleSigned(cc.p(0, -1), node._alongVector);
-                    var p1 = cc.pRotateByAngle(cc.p(0, -1), cc.p(0, 0), angle);
-                    var factor = Math.min(Math.abs(1 / p1.x), Math.abs(1 / p1.y));
-                    this._startPoint.x = tWidth * (-p1.x * factor) + tWidth;
-                    this._startPoint.y = tHeight * (p1.y * factor) - tHeight;
-                    this._endPoint.x = tWidth * (p1.x * factor) + tWidth;
-                    this._endPoint.y = tHeight * (-p1.y * factor) - tHeight;
-                    var locStartColor = this._displayedColor, locEndColor = node._endColor;
-                    var startOpacity = node._startOpacity / 255, endOpacity = node._endOpacity / 255;
-                    this._startStopStr = "rgba(" + Math.round(locStartColor.r) + "," + Math.round(locStartColor.g) + "," + Math.round(locStartColor.b) + "," + startOpacity.toFixed(4) + ")";
-                    this._endStopStr = "rgba(" + Math.round(locEndColor.r) + "," + Math.round(locEndColor.g) + "," + Math.round(locEndColor.b) + "," + endOpacity.toFixed(4) + ")";
-                    if (node._colorStops) {
-                        this._startOpacity = 0;
-                        this._endOpacity = 0;
-                        this._colorStopsStr = [];
-                        for (var i = 0; i < node._colorStops.length; i++) {
-                            var stopColor = node._colorStops[i].color;
-                            var stopOpacity = null == stopColor.a ? 1 : stopColor.a / 255;
-                            this._colorStopsStr.push("rgba(" + Math.round(stopColor.r) + "," + Math.round(stopColor.g) + "," + Math.round(stopColor.b) + "," + stopOpacity.toFixed(4) + ")");
-                        }
-                    }
-                };
-            })();
-            cc.configuration = {
-                ERROR: 0,
-                STRING: 1,
-                INT: 2,
-                DOUBLE: 3,
-                BOOLEAN: 4,
-                _maxTextureSize: 0,
-                _maxModelviewStackDepth: 0,
-                _supportsPVRTC: false,
-                _supportsNPOT: false,
-                _supportsBGRA8888: false,
-                _supportsDiscardFramebuffer: false,
-                _supportsShareableVAO: false,
-                _maxSamplesAllowed: 0,
-                _maxTextureUnits: 0,
-                _GlExtensions: "",
-                _valueDict: {},
-                _inited: false,
-                _init: function() {
-                    var locValueDict = this._valueDict;
-                    locValueDict["cocos2d.x.version"] = cc.ENGINE_VERSION;
-                    locValueDict["cocos2d.x.compiled_with_profiler"] = false;
-                    locValueDict["cocos2d.x.compiled_with_gl_state_cache"] = cc.macro.ENABLE_GL_STATE_CACHE;
-                    this._inited = true;
-                },
-                getMaxTextureSize: function() {
-                    return this._maxTextureSize;
-                },
-                getMaxModelviewStackDepth: function() {
-                    return this._maxModelviewStackDepth;
-                },
-                getMaxTextureUnits: function() {
-                    return this._maxTextureUnits;
-                },
-                supportsNPOT: function() {
-                    return this._supportsNPOT;
-                },
-                supportsPVRTC: function() {
-                    return this._supportsPVRTC;
-                },
-                supportsETC: function() {
-                    return false;
-                },
-                supportsS3TC: function() {
-                    return false;
-                },
-                supportsATITC: function() {
-                    return false;
-                },
-                supportsBGRA8888: function() {
-                    return this._supportsBGRA8888;
-                },
-                supportsDiscardFramebuffer: function() {
-                    return this._supportsDiscardFramebuffer;
-                },
-                supportsShareableVAO: function() {
-                    return this._supportsShareableVAO;
-                },
-                checkForGLExtension: function(searchName) {
-                    return this._GlExtensions.indexOf(searchName) > -1;
-                },
-                getValue: function(key, default_value) {
-                    this._inited || this._init();
-                    var locValueDict = this._valueDict;
-                    if (locValueDict[key]) {
-                        return locValueDict[key];
-                    }
-                    return default_value;
-                },
-                setValue: function(key, value) {
-                    this._valueDict[key] = value;
-                },
-                gatherGPUInfo: function() {
-                    if (cc._renderType === cc.game.RENDER_TYPE_CANVAS) {
-                        return;
-                    }
-                    this._inited || this._init();
-                    var gl = cc._renderContext;
-                    var locValueDict = this._valueDict;
-                    locValueDict["gl.vendor"] = gl.getParameter(gl.VENDOR);
-                    locValueDict["gl.renderer"] = gl.getParameter(gl.RENDERER);
-                    locValueDict["gl.version"] = gl.getParameter(gl.VERSION);
-                    this._GlExtensions = "";
-                    var extArr = gl.getSupportedExtensions();
-                    for (var i = 0; i < extArr.length; i++) {
-                        this._GlExtensions += extArr[i] + " ";
-                    }
-                    this._maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
-                    locValueDict["gl.max_texture_size"] = this._maxTextureSize;
-                    this._maxTextureUnits = gl.getParameter(gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS);
-                    locValueDict["gl.max_texture_units"] = this._maxTextureUnits;
-                    this._supportsPVRTC = this.checkForGLExtension("GL_IMG_texture_compression_pvrtc");
-                    locValueDict["gl.supports_PVRTC"] = this._supportsPVRTC;
-                    this._supportsNPOT = false;
-                    locValueDict["gl.supports_NPOT"] = this._supportsNPOT;
-                    this._supportsBGRA8888 = this.checkForGLExtension("GL_IMG_texture_format_BGRA888");
-                    locValueDict["gl.supports_BGRA8888"] = this._supportsBGRA8888;
-                    this._supportsDiscardFramebuffer = this.checkForGLExtension("GL_EXT_discard_framebuffer");
-                    locValueDict["gl.supports_discard_framebuffer"] = this._supportsDiscardFramebuffer;
-                    this._supportsShareableVAO = this.checkForGLExtension("vertex_array_object");
-                    locValueDict["gl.supports_vertex_array_object"] = this._supportsShareableVAO;
-                    cc.checkGLErrorDebug();
-                },
-                loadConfigFile: function(url) {
-                    this._inited || this._init();
-                    var dict = cc.loader.getRes(url);
-                    if (!dict) {
-                        throw new Error("Please load the resource first : " + url);
-                    }
-                    cc.assert(dict, cc._LogInfos.configuration.loadConfigFile_2, url);
-                    var getDatas = dict["data"];
-                    if (!getDatas) {
-                        cc.log(cc._LogInfos.configuration.loadConfigFile, url);
-                        return;
-                    }
-                    for (var selKey in getDatas) {
-                        this._valueDict[selKey] = getDatas[selKey];
-                    }
-                }
-            };
-            cc.DrawingPrimitiveCanvas = cc._Class.extend({
-                _cacheArray: [],
-                _renderContext: null,
-                ctor: function(renderContext) {
-                    this._renderContext = renderContext;
-                },
-                drawPoint: function(point, size) {
-                    size || (size = 1);
-                    var locScaleX = cc.view.getScaleX(), locScaleY = cc.view.getScaleY();
-                    var newPoint = cc.p(point.x * locScaleX, point.y * locScaleY);
-                    var ctx = this._renderContext.getContext();
-                    ctx.beginPath();
-                    ctx.arc(newPoint.x, -newPoint.y, size * locScaleX, 0, 2 * Math.PI, false);
-                    ctx.closePath();
-                    ctx.fill();
-                },
-                drawPoints: function(points, numberOfPoints, size) {
-                    if (null == points) {
-                        return;
-                    }
-                    size || (size = 1);
-                    var locContext = this._renderContext.getContext(), locScaleX = cc.view.getScaleX(), locScaleY = cc.view.getScaleY();
-                    locContext.beginPath();
-                    for (var i = 0, len = points.length; i < len; i++) {
-                        locContext.arc(points[i].x * locScaleX, -points[i].y * locScaleY, size * locScaleX, 0, 2 * Math.PI, false);
-                    }
-                    locContext.closePath();
-                    locContext.fill();
-                },
-                drawLine: function(origin, destination) {
-                    var locContext = this._renderContext.getContext(), locScaleX = cc.view.getScaleX(), locScaleY = cc.view.getScaleY();
-                    locContext.beginPath();
-                    locContext.moveTo(origin.x * locScaleX, -origin.y * locScaleY);
-                    locContext.lineTo(destination.x * locScaleX, -destination.y * locScaleY);
-                    locContext.closePath();
-                    locContext.stroke();
-                },
-                drawRect: function(origin, destination) {
-                    this.drawLine(cc.p(origin.x, origin.y), cc.p(destination.x, origin.y));
-                    this.drawLine(cc.p(destination.x, origin.y), cc.p(destination.x, destination.y));
-                    this.drawLine(cc.p(destination.x, destination.y), cc.p(origin.x, destination.y));
-                    this.drawLine(cc.p(origin.x, destination.y), cc.p(origin.x, origin.y));
-                },
-                drawSolidRect: function(origin, destination, color) {
-                    var vertices = [ origin, cc.p(destination.x, origin.y), destination, cc.p(origin.x, destination.y) ];
-                    this.drawSolidPoly(vertices, 4, color);
-                },
-                drawPoly: function(vertices, numOfVertices, closePolygon, fill) {
-                    fill = fill || false;
-                    if (null == vertices) {
-                        return;
-                    }
-                    if (vertices.length < 3) {
-                        throw new Error("Polygon's point must greater than 2");
-                    }
-                    var firstPoint = vertices[0], locContext = this._renderContext.getContext();
-                    var locScaleX = cc.view.getScaleX(), locScaleY = cc.view.getScaleY();
-                    locContext.beginPath();
-                    locContext.moveTo(firstPoint.x * locScaleX, -firstPoint.y * locScaleY);
-                    for (var i = 1, len = vertices.length; i < len; i++) {
-                        locContext.lineTo(vertices[i].x * locScaleX, -vertices[i].y * locScaleY);
-                    }
-                    closePolygon && locContext.closePath();
-                    fill ? locContext.fill() : locContext.stroke();
-                },
-                drawSolidPoly: function(polygons, numberOfPoints, color) {
-                    this.setDrawColor(color.r, color.g, color.b, color.a);
-                    this.drawPoly(polygons, numberOfPoints, true, true);
-                },
-                drawCircle: function(center, radius, angle, segments, drawLineToCenter) {
-                    drawLineToCenter = drawLineToCenter || false;
-                    var locContext = this._renderContext.getContext();
-                    var locScaleX = cc.view.getScaleX(), locScaleY = cc.view.getScaleY();
-                    locContext.beginPath();
-                    var endAngle = angle - 2 * Math.PI;
-                    locContext.arc(0 | center.x * locScaleX, 0 | -(center.y * locScaleY), radius * locScaleX, -angle, -endAngle, false);
-                    drawLineToCenter && locContext.lineTo(0 | center.x * locScaleX, 0 | -(center.y * locScaleY));
-                    locContext.stroke();
-                },
-                drawQuadBezier: function(origin, control, destination, segments) {
-                    var vertices = this._cacheArray;
-                    vertices.length = 0;
-                    var t = 0;
-                    for (var i = 0; i < segments; i++) {
-                        var x = Math.pow(1 - t, 2) * origin.x + 2 * (1 - t) * t * control.x + t * t * destination.x;
-                        var y = Math.pow(1 - t, 2) * origin.y + 2 * (1 - t) * t * control.y + t * t * destination.y;
-                        vertices.push(cc.p(x, y));
-                        t += 1 / segments;
-                    }
-                    vertices.push(cc.p(destination.x, destination.y));
-                    this.drawPoly(vertices, segments + 1, false, false);
-                },
-                drawCubicBezier: function(origin, control1, control2, destination, segments) {
-                    var vertices = this._cacheArray;
-                    vertices.length = 0;
-                    var t = 0;
-                    for (var i = 0; i < segments; i++) {
-                        var x = Math.pow(1 - t, 3) * origin.x + 3 * Math.pow(1 - t, 2) * t * control1.x + 3 * (1 - t) * t * t * control2.x + t * t * t * destination.x;
-                        var y = Math.pow(1 - t, 3) * origin.y + 3 * Math.pow(1 - t, 2) * t * control1.y + 3 * (1 - t) * t * t * control2.y + t * t * t * destination.y;
-                        vertices.push(cc.p(x, y));
-                        t += 1 / segments;
-                    }
-                    vertices.push(cc.p(destination.x, destination.y));
-                    this.drawPoly(vertices, segments + 1, false, false);
-                },
-                drawCatmullRom: function(points, segments) {
-                    this.drawCardinalSpline(points, .5, segments);
-                },
-                drawCardinalSpline: function(config, tension, segments) {
-                    cc._renderContext.setStrokeStyle("rgba(255,255,255,1)");
-                    var points = this._cacheArray;
-                    points.length = 0;
-                    var p, lt;
-                    var deltaT = 1 / config.length;
-                    for (var i = 0; i < segments + 1; i++) {
-                        var dt = i / segments;
-                        if (1 === dt) {
-                            p = config.length - 1;
-                            lt = 1;
-                        } else {
-                            p = 0 | dt / deltaT;
-                            lt = (dt - deltaT * p) / deltaT;
-                        }
-                        var newPos = cc.cardinalSplineAt(cc.getControlPointAt(config, p - 1), cc.getControlPointAt(config, p - 0), cc.getControlPointAt(config, p + 1), cc.getControlPointAt(config, p + 2), tension, lt);
-                        points.push(newPos);
-                    }
-                    this.drawPoly(points, segments + 1, false, false);
-                },
-                drawImage: function(image, sourcePoint, sourceSize, destPoint, destSize) {
-                    var len = arguments.length;
-                    var ctx = this._renderContext.getContext();
-                    switch (len) {
-                      case 2:
-                        var height = image.height;
-                        ctx.drawImage(image, sourcePoint.x, -(sourcePoint.y + height));
-                        break;
-
-                      case 3:
-                        ctx.drawImage(image, sourcePoint.x, -(sourcePoint.y + sourceSize.height), sourceSize.width, sourceSize.height);
-                        break;
-
-                      case 5:
-                        ctx.drawImage(image, sourcePoint.x, sourcePoint.y, sourceSize.width, sourceSize.height, destPoint.x, -(destPoint.y + destSize.height), destSize.width, destSize.height);
-                        break;
-
-                      default:
-                        throw new Error("Argument must be non-nil");
-                    }
-                },
-                drawStar: function(ctx, radius, color) {
-                    var wrapper = ctx || this._renderContext;
-                    var context = wrapper.getContext();
-                    radius *= cc.view.getScaleX();
-                    var colorStr = "rgba(" + (0 | color.r) + "," + (0 | color.g) + "," + (0 | color.b);
-                    wrapper.setFillStyle(colorStr + ",1)");
-                    var subRadius = radius / 10;
-                    context.beginPath();
-                    context.moveTo(-radius, radius);
-                    context.lineTo(0, subRadius);
-                    context.lineTo(radius, radius);
-                    context.lineTo(subRadius, 0);
-                    context.lineTo(radius, -radius);
-                    context.lineTo(0, -subRadius);
-                    context.lineTo(-radius, -radius);
-                    context.lineTo(-subRadius, 0);
-                    context.lineTo(-radius, radius);
-                    context.closePath();
-                    context.fill();
-                    var rg = context.createRadialGradient(0, 0, subRadius, 0, 0, radius);
-                    rg.addColorStop(0, colorStr + ", 1)");
-                    rg.addColorStop(.3, colorStr + ", 0.8)");
-                    rg.addColorStop(1, colorStr + ", 0.0)");
-                    wrapper.setFillStyle(rg);
-                    context.beginPath();
-                    var startAngle_1 = 0;
-                    var endAngle_1 = cc.macro.PI2;
-                    context.arc(0, 0, radius - subRadius, startAngle_1, endAngle_1, false);
-                    context.closePath();
-                    context.fill();
-                },
-                drawColorBall: function(ctx, radius, color) {
-                    var wrapper = ctx || this._renderContext;
-                    var context = wrapper.getContext();
-                    radius *= cc.view.getScaleX();
-                    var colorStr = "rgba(" + (0 | color.r) + "," + (0 | color.g) + "," + (0 | color.b);
-                    var subRadius = radius / 10;
-                    var g1 = context.createRadialGradient(0, 0, subRadius, 0, 0, radius);
-                    g1.addColorStop(0, colorStr + ", 1)");
-                    g1.addColorStop(.3, colorStr + ", 0.8)");
-                    g1.addColorStop(.6, colorStr + ", 0.4)");
-                    g1.addColorStop(1, colorStr + ", 0.0)");
-                    wrapper.setFillStyle(g1);
-                    context.beginPath();
-                    var startAngle_1 = 0;
-                    var endAngle_1 = cc.macro.PI2;
-                    context.arc(0, 0, radius, startAngle_1, endAngle_1, false);
-                    context.closePath();
-                    context.fill();
-                },
-                fillText: function(strText, x, y) {
-                    this._renderContext.getContext().fillText(strText, x, -y);
-                },
-                setDrawColor: function(r, g, b, a) {
-                    this._renderContext.setFillStyle("rgba(" + r + "," + g + "," + b + "," + a / 255 + ")");
-                    this._renderContext.setStrokeStyle("rgba(" + r + "," + g + "," + b + "," + a / 255 + ")");
-                },
-                setPointSize: function(pointSize) {},
-                setLineWidth: function(width) {
-                    this._renderContext.getContext().lineWidth = width * cc.view.getScaleX();
                 }
             });
             var EventTarget = require("../cocos2d/core/event/event-target");
@@ -4635,7 +3607,7 @@ var _ccsg = global._ccsg;
             })();
         }).call(window, cc, _ccsg);
     }, {
-        "../cocos2d/core/event/event-target": 49
+        "../cocos2d/core/event/event-target": 53
     } ],
     4: [ function(require, module, exports) {
         var JS = cc.js;
@@ -6951,9 +5923,9 @@ var _ccsg = global._ccsg;
         cc.Director.PROJECTION_CUSTOM = 3;
         cc.Director.PROJECTION_DEFAULT = cc.Director.PROJECTION_2D;
     }, {
-        "./event/event-target": 49,
-        "./load-pipeline/auto-release-utils": 56,
-        "./platform/_CCClass": 74
+        "./event/event-target": 53,
+        "./load-pipeline/auto-release-utils": 60,
+        "./platform/_CCClass": 79
     } ],
     19: [ function(require, module, exports) {
         require("./CCDirector");
@@ -7222,8 +6194,8 @@ var _ccsg = global._ccsg;
         cc.js.addon(game, EventTarget.prototype);
         cc.game = module.exports = game;
     }, {
-        "./event/event-target": 49,
-        "./platform/CCView": 72
+        "./event/event-target": 53,
+        "./platform/CCView": 77
     } ],
     21: [ function(require, module, exports) {
         "use strict";
@@ -7472,6 +6444,7 @@ var _ccsg = global._ccsg;
                 cc.director.getActionManager().removeAllActionsFromTarget(this);
                 this._releaseAllActions();
                 _currentHovered === this && (_currentHovered = null);
+                cc.eventManager.removeListeners(this);
                 for (i = 0, len = this.__eventTargets.length; i < len; ++i) {
                     var target = this.__eventTargets[i];
                     target && target.targetOff(this);
@@ -7581,7 +6554,10 @@ var _ccsg = global._ccsg;
                 prefabInfo && prefabInfo.sync && !prefabInfo._synced && PrefabHelper.syncWithPrefab(this);
                 this._updateDummySgNode();
                 this._parent && this._parent._sgNode.addChild(this._sgNode);
-                this._activeInHierarchy || cc.director.getActionManager().pauseTarget(this);
+                if (!this._activeInHierarchy) {
+                    cc.director.getActionManager().pauseTarget(this);
+                    cc.eventManager.pauseTarget(this);
+                }
                 var children = this._children;
                 for (var i = 0, len = children.length; i < len; i++) {
                     children[i]._onBatchCreated();
@@ -7632,10 +6608,12 @@ var _ccsg = global._ccsg;
                 }
                 if (newActive) {
                     cc.director.getActionManager().resumeTarget(this);
+                    cc.eventManager.resumeTarget(this);
                     this._touchListener && (this._touchListener.mask = _searchMaskParent(this));
                     this._mouseListener && (this._mouseListener.mask = _searchMaskParent(this));
                 } else {
                     cc.director.getActionManager().pauseTarget(this);
+                    cc.eventManager.pauseTarget(this);
                 }
                 this._objFlags &= ~Activating;
             },
@@ -7689,6 +6667,7 @@ var _ccsg = global._ccsg;
                             onTouchMoved: _touchMoveHandler,
                             onTouchEnded: _touchEndHandler
                         });
+                        cc.eventManager.addListener(this._touchListener, this);
                         newAdded = true;
                     }
                 } else {
@@ -7703,11 +6682,12 @@ var _ccsg = global._ccsg;
                             onMouseUp: _mouseUpHandler,
                             onMouseScroll: _mouseWheelHandler
                         });
+                        cc.eventManager.addListener(this._mouseListener, this);
                         newAdded = true;
                     }
                 }
                 newAdded && !this._activeInHierarchy && cc.director.getScheduler().schedule(function() {
-                    !this._activeInHierarchy;
+                    this._activeInHierarchy || cc.eventManager.pauseTarget(this);
                 }, this, 0, 0, 0, false);
                 return this._EventTargetOn(type, callback, target, useCapture);
             },
@@ -7727,6 +6707,7 @@ var _ccsg = global._ccsg;
                             return;
                         }
                     }
+                    cc.eventManager.removeListener(this._touchListener);
                     this._touchListener = null;
                 }
             },
@@ -7738,6 +6719,7 @@ var _ccsg = global._ccsg;
                         }
                     }
                     _currentHovered === this && (_currentHovered = null);
+                    cc.eventManager.removeListener(this._mouseListener);
                     this._mouseListener = null;
                 }
             },
@@ -7819,9 +6801,9 @@ var _ccsg = global._ccsg;
         Node.EventType = EventType;
         cc.Node = module.exports = Node;
     }, {
-        "./event/event-target": 49,
-        "./utils/base-node": 94,
-        "./utils/prefab-helper": 99
+        "./event/event-target": 53,
+        "./utils/base-node": 99,
+        "./utils/prefab-helper": 104
     } ],
     22: [ function(require, module, exports) {
         var NIL = function() {};
@@ -7874,7 +6856,7 @@ var _ccsg = global._ccsg;
         });
         module.exports = cc.Scene;
     }, {
-        "./utils/base-node": 94
+        "./utils/base-node": 99
     } ],
     23: [ function(require, module, exports) {
         var ListEntry = function(prev, next, callback, target, priority, paused, markedForDeletion) {
@@ -8465,7 +7447,7 @@ var _ccsg = global._ccsg;
         });
         module.exports = cc.RawAsset;
     }, {
-        "../platform/CCObject": 70
+        "../platform/CCObject": 75
     } ],
     28: [ function(require, module, exports) {
         var Scene = cc.Class({
@@ -8497,38 +7479,6 @@ var _ccsg = global._ccsg;
         cc._CoffeeScript = CoffeeScript;
     }, {} ],
     30: [ function(require, module, exports) {
-        var SpriteAtlas = cc.Class({
-            name: "cc.SpriteAtlas",
-            "extends": cc.Asset,
-            properties: {
-                _spriteFrames: {
-                    "default": {}
-                }
-            },
-            getTexture: function() {
-                var keys = Object.keys(this._spriteFrames);
-                if (keys.length > 0) {
-                    var spriteFrame = this._spriteFrames[keys[0]];
-                    return spriteFrame ? spriteFrame.getTexture() : null;
-                }
-                return null;
-            },
-            getSpriteFrame: function(key) {
-                return this._spriteFrames[key];
-            },
-            getSpriteFrames: function() {
-                var frames = [];
-                var spriteFrames = this._spriteFrames;
-                for (var key in spriteFrames) {
-                    frames.push(spriteFrames[key]);
-                }
-                return frames;
-            }
-        });
-        cc.SpriteAtlas = SpriteAtlas;
-        module.exports = SpriteAtlas;
-    }, {} ],
-    31: [ function(require, module, exports) {
         require("./CCRawAsset");
         require("./CCAsset");
         require("./CCFont");
@@ -8537,19 +7487,17 @@ var _ccsg = global._ccsg;
         require("./CCSceneAsset");
         require("../sprites/CCSpriteFrame");
         require("../textures/CCTexture2D");
-        require("./CCSpriteAtlas");
     }, {
-        "../sprites/CCSpriteFrame": 89,
-        "../textures/CCTexture2D": 90,
+        "../sprites/CCSpriteFrame": 94,
+        "../textures/CCTexture2D": 95,
         "./CCAsset": 24,
         "./CCFont": 25,
         "./CCPrefab": 26,
         "./CCRawAsset": 27,
         "./CCSceneAsset": 28,
-        "./CCScripts": 29,
-        "./CCSpriteAtlas": 30
+        "./CCScripts": 29
     } ],
-    32: [ function(require, module, exports) {
+    31: [ function(require, module, exports) {
         var TOP = 1;
         var MID = 2;
         var BOT = 4;
@@ -8701,7 +7649,7 @@ var _ccsg = global._ccsg;
             _getParentSize: getParentSize
         };
     }, {} ],
-    33: [ function(require, module, exports) {
+    32: [ function(require, module, exports) {
         var AnimationAnimator = require("../../animation/animation-animator");
         var AnimationClip = require("../../animation/animation-clip");
         function equalClips(clip1, clip2) {
@@ -8975,6 +7923,296 @@ var _ccsg = global._ccsg;
     }, {
         "../../animation/animation-animator": 4,
         "../../animation/animation-clip": 5,
+        "./CCComponent": 35
+    } ],
+    33: [ function(require, module, exports) {
+        var Transition = cc.Enum({
+            NONE: 0,
+            COLOR: 1,
+            SPRITE: 2,
+            SCALE: 3
+        });
+        var Button = cc.Class({
+            name: "cc.Button",
+            "extends": require("./CCComponent"),
+            ctor: function() {
+                this._resetState();
+                this._fromColor = null;
+                this._toColor = null;
+                this._time = 0;
+                this._transitionFinished = true;
+                this._fromScale = 1;
+                this._toScale = 1;
+                this._originalScale = 1;
+                this._sprite = null;
+            },
+            _resetState: function() {
+                this._pressed = false;
+                this._hovered = false;
+            },
+            editor: false,
+            properties: {
+                interactable: {
+                    "default": true,
+                    tooltip: "i18n:COMPONENT.button.interactable",
+                    notify: function(oldValue) {
+                        this._updateState();
+                        this.interactable || this._resetState();
+                    },
+                    animatable: false
+                },
+                _resizeToTarget: {
+                    animatable: false,
+                    set: function(value) {
+                        value && this._resizeNodeToTargetNode();
+                    }
+                },
+                enableAutoGrayEffect: {
+                    "default": true,
+                    tooltip: "i18n:COMPONENT.button.auto_gray_effect",
+                    notify: function() {
+                        this._updateDisabledState();
+                    }
+                },
+                transition: {
+                    "default": Transition.NONE,
+                    tooltip: "i18n:COMPONENT.button.transition",
+                    type: Transition,
+                    animatable: false
+                },
+                normalColor: {
+                    "default": cc.color(214, 214, 214),
+                    displayName: "Normal",
+                    tooltip: "i18n:COMPONENT.button.normal_color",
+                    notify: function() {
+                        this._updateState();
+                    }
+                },
+                pressedColor: {
+                    "default": cc.color(211, 211, 211),
+                    displayName: "Pressed",
+                    tooltip: "i18n:COMPONENT.button.pressed_color"
+                },
+                hoverColor: {
+                    "default": cc.Color.WHITE,
+                    displayName: "Hover",
+                    tooltip: "i18n:COMPONENT.button.hover_color"
+                },
+                disabledColor: {
+                    "default": cc.color(124, 124, 124),
+                    displayName: "Disabled",
+                    tooltip: "i18n:COMPONENT.button.disabled_color",
+                    notify: function() {
+                        this._updateState();
+                    }
+                },
+                duration: {
+                    "default": .1,
+                    range: [ 0, 10 ],
+                    tooltip: "i18n:COMPONENT.button.duration"
+                },
+                zoomScale: {
+                    "default": 1.2,
+                    tooltip: "i18n:COMPONENT.button.zoom_scale"
+                },
+                normalSprite: {
+                    "default": null,
+                    type: cc.SpriteFrame,
+                    displayName: "Normal",
+                    tooltip: "i18n:COMPONENT.button.normal_sprite",
+                    notify: function() {
+                        this._updateState();
+                    }
+                },
+                pressedSprite: {
+                    "default": null,
+                    type: cc.SpriteFrame,
+                    displayName: "Pressed",
+                    tooltip: "i18n:COMPONENT.button.pressed_sprite"
+                },
+                hoverSprite: {
+                    "default": null,
+                    type: cc.SpriteFrame,
+                    displayName: "Hover",
+                    tooltip: "i18n:COMPONENT.button.hover_sprite"
+                },
+                disabledSprite: {
+                    "default": null,
+                    type: cc.SpriteFrame,
+                    displayName: "Disabled",
+                    tooltip: "i18n:COMPONENT.button.disabled_sprite",
+                    notify: function() {
+                        this._updateState();
+                    }
+                },
+                target: {
+                    "default": null,
+                    type: cc.Node,
+                    tooltip: "i18n:COMPONENT.button.target",
+                    notify: function() {
+                        this._applyTarget();
+                    }
+                },
+                clickEvents: {
+                    "default": [],
+                    type: cc.Component.EventHandler,
+                    tooltip: "i18n:COMPONENT.button.click_events"
+                }
+            },
+            statics: {
+                Transition: Transition
+            },
+            __preload: function() {
+                this.target || (this.target = this.node);
+            },
+            onEnable: function() {
+                this.normalSprite && this.normalSprite.ensureLoadTexture();
+                this.hoverSprite && this.hoverSprite.ensureLoadTexture();
+                this.pressedSprite && this.pressedSprite.ensureLoadTexture();
+                this.disabledSprite && this.disabledSprite.ensureLoadTexture();
+                this._registerEvent();
+            },
+            onLoad: function() {
+                this._applyTarget();
+                this._updateState();
+            },
+            update: function(dt) {
+                var target = this.target;
+                if (this.transition !== Transition.COLOR && this.transition !== Transition.SCALE || !target || this._transitionFinished) {
+                    return;
+                }
+                this.time += dt;
+                var ratio = 1;
+                this.duration > 0 && (ratio = this.time / this.duration);
+                if (ratio >= 1) {
+                    ratio = 1;
+                    this._transitionFinished = true;
+                }
+                this.transition === Transition.COLOR ? target.color = this._fromColor.lerp(this._toColor, ratio) : this.transition === Transition.SCALE && (target.scale = cc.lerp(this._fromScale, this._toScale, ratio));
+            },
+            _registerEvent: function() {
+                this.node.on(cc.Node.EventType.TOUCH_START, this._onTouchBegan, this);
+                this.node.on(cc.Node.EventType.TOUCH_MOVE, this._onTouchMove, this);
+                this.node.on(cc.Node.EventType.TOUCH_END, this._onTouchEnded, this);
+                this.node.on(cc.Node.EventType.TOUCH_CANCEL, this._onTouchCancel, this);
+                this.node.on(cc.Node.EventType.MOUSE_ENTER, this._onMouseMoveIn, this);
+                this.node.on(cc.Node.EventType.MOUSE_LEAVE, this._onMouseMoveOut, this);
+            },
+            _getTargetSprite: function(target) {
+                var sprite = null;
+                target && (sprite = target.getComponent(cc.Sprite));
+                return sprite;
+            },
+            _applyTarget: function() {
+                this._sprite = this._getTargetSprite(this.target);
+                this.target && (this._originalScale = this.target.scale);
+            },
+            _onTouchBegan: function(event) {
+                if (!this.interactable || !this.enabledInHierarchy) {
+                    return;
+                }
+                this._pressed = true;
+                this.transition === Transition.SCALE ? this._zoomUp() : this._updateState();
+                event.stopPropagation();
+            },
+            _onTouchMove: function(event) {
+                if (!this.interactable || !this.enabledInHierarchy) {
+                    return;
+                }
+                var touch = event.touch;
+                var hit = this.node._hitTest(touch.getLocation());
+                if (this.transition === Transition.SCALE && this.target) {
+                    hit ? this.target.scale = this._originalScale * this.zoomScale : this.target.scale = this._originalScale;
+                } else {
+                    var state;
+                    state = hit ? "pressed" : "normal";
+                    var color = this[state + "Color"];
+                    var sprite = this[state + "Sprite"];
+                    this._applyTransition(color, sprite);
+                }
+                event.stopPropagation();
+            },
+            _onTouchEnded: function(event) {
+                if (!this.interactable || !this.enabledInHierarchy) {
+                    return;
+                }
+                this._pressed && cc.Component.EventHandler.emitEvents(this.clickEvents, event);
+                this._pressed = false;
+                this.transition === Transition.SCALE ? this._zoomBack() : this._updateState();
+                event.stopPropagation();
+            },
+            _zoomUp: function() {
+                this._fromScale = this._originalScale;
+                this._toScale = this._originalScale * this.zoomScale;
+                this.time = 0;
+                this._transitionFinished = false;
+            },
+            _zoomBack: function() {
+                this._fromScale = this._originalScale * this.zoomScale;
+                this._toScale = this._originalScale;
+                this.time = 0;
+                this._transitionFinished = false;
+            },
+            _onTouchCancel: function() {
+                if (!this.interactable || !this.enabledInHierarchy) {
+                    return;
+                }
+                this._pressed = false;
+                this._updateState();
+            },
+            _onMouseMoveIn: function() {
+                if (!this.hoverSprite || this._pressed || !this.interactable || !this.enabledInHierarchy) {
+                    return;
+                }
+                if (!this._hovered) {
+                    this._hovered = true;
+                    this._updateState();
+                }
+            },
+            _onMouseMoveOut: function() {
+                if (this._hovered) {
+                    this._hovered = false;
+                    this._updateState();
+                }
+            },
+            _updateState: function() {
+                var state;
+                state = this.interactable ? this._pressed ? "pressed" : this._hovered ? "hover" : "normal" : "disabled";
+                var color = this[state + "Color"];
+                var sprite = this[state + "Sprite"];
+                this._applyTransition(color, sprite);
+                this._updateDisabledState();
+            },
+            onDisable: function() {
+                this._hovered = false;
+                this._pressed = false;
+                this.node.off(cc.Node.EventType.TOUCH_START, this._onTouchBegan, this);
+                this.node.off(cc.Node.EventType.TOUCH_MOVE, this._onTouchMove, this);
+                this.node.off(cc.Node.EventType.TOUCH_END, this._onTouchEnded, this);
+                this.node.off(cc.Node.EventType.TOUCH_CANCEL, this._onTouchCancel, this);
+                this.node.off(cc.Node.EventType.MOUSE_ENTER, this._onMouseMoveIn, this);
+                this.node.off(cc.Node.EventType.MOUSE_LEAVE, this._onMouseMoveOut, this);
+            },
+            _applyTransition: function(color, sprite) {
+                var transition = this.transition;
+                if (transition === Transition.COLOR) {
+                    var target = this.target;
+                    this._fromColor = target.color.clone();
+                    this._toColor = color;
+                    this.time = 0;
+                    this._transitionFinished = false;
+                } else {
+                    transition === Transition.SPRITE && this._sprite && sprite && (this._sprite.spriteFrame = sprite);
+                }
+            },
+            _resizeNodeToTargetNode: false,
+            _updateDisabledState: function() {
+                this._sprite && this._sprite._sgNode.setState(0);
+                this.enableAutoGrayEffect && (this.transition === Transition.SPRITE && this.disabledSprite || this._sprite && !this.interactable && this._sprite._sgNode.setState(1));
+            }
+        });
+        cc.Button = module.exports = Button;
+    }, {
         "./CCComponent": 35
     } ],
     34: [ function(require, module, exports) {
@@ -9363,9 +8601,9 @@ var _ccsg = global._ccsg;
         cc.Component = module.exports = Component;
     }, {
         "../CCNode": 21,
-        "../platform/CCObject": 70,
-        "../platform/id-generater": 78,
-        "../utils/misc": 97
+        "../platform/CCObject": 75,
+        "../platform/id-generater": 83,
+        "../utils/misc": 102
     } ],
     36: [ function(require, module, exports) {
         cc.Component.EventHandler = cc.Class({
@@ -10263,7 +9501,7 @@ var _ccsg = global._ccsg;
         });
         cc._SGComponent = module.exports = SGComponent;
     }, {
-        "../utils/scene-graph-helper": 100,
+        "../utils/scene-graph-helper": 105,
         "./CCComponent": 35
     } ],
     43: [ function(require, module, exports) {
@@ -10526,60 +9764,10 @@ var _ccsg = global._ccsg;
         misc.propertyDefine(Sprite, SameNameGetSets, DiffNameGetSets);
         cc.Sprite = module.exports = Sprite;
     }, {
-        "../utils/misc": 97,
+        "../utils/misc": 102,
         "./CCRendererUnderSG": 41
     } ],
     44: [ function(require, module, exports) {
-        var SpriteDistortion = cc.Class({
-            name: "cc.SpriteDistortion",
-            "extends": require("./CCComponent"),
-            editor: false,
-            ctor: function() {
-                this._spriteSGNode = null;
-            },
-            properties: {
-                _distortionOffset: cc.v2(0, 0),
-                offset: {
-                    get: function() {
-                        return this._distortionOffset;
-                    },
-                    set: function(value) {
-                        this._distortionOffset.x = value.x;
-                        this._distortionOffset.y = value.y;
-                        this._spriteSGNode && this._spriteSGNode.setDistortionOffset(this._distortionOffset);
-                    }
-                },
-                _distortionTiling: cc.v2(1, 1),
-                tiling: {
-                    get: function() {
-                        return this._distortionTiling;
-                    },
-                    set: function(value) {
-                        this._distortionTiling.x = value.x;
-                        this._distortionTiling.y = value.y;
-                        this._spriteSGNode && this._spriteSGNode.setDistortionTiling(this._distortionTiling);
-                    }
-                }
-            },
-            onEnable: function() {
-                var sprite = this.node.getComponent("cc.Sprite");
-                var sgNode = this._spriteSGNode = sprite && sprite._sgNode;
-                if (this._spriteSGNode) {
-                    sgNode.setState(cc.Scale9Sprite.state.DISTORTION);
-                    sgNode.setDistortionOffset(this._distortionOffset);
-                    sgNode.setDistortionTiling(this._distortionTiling);
-                }
-            },
-            onDisable: function() {
-                this._spriteSGNode && this._spriteSGNode.setState(cc.Scale9Sprite.state.NORMAL);
-                this._spriteSGNode = null;
-            }
-        });
-        cc.SpriteDistortion = module.exports = SpriteDistortion;
-    }, {
-        "./CCComponent": 35
-    } ],
-    45: [ function(require, module, exports) {
         var WidgetManager = require("../base-ui/CCWidgetManager");
         var AlignFlags = WidgetManager._AlignFlags;
         var TOP = AlignFlags.TOP;
@@ -10837,18 +10025,19 @@ var _ccsg = global._ccsg;
         });
         cc.Widget = module.exports = Widget;
     }, {
-        "../base-ui/CCWidgetManager": 32,
+        "../base-ui/CCWidgetManager": 31,
         "./CCComponent": 35
     } ],
-    46: [ function(require, module, exports) {
+    45: [ function(require, module, exports) {
         require("./CCComponent");
         require("./CCRendererInSG");
         require("./CCRendererUnderSG");
         require("./CCComponentEventHandler");
         require("./missing-script");
-        module.exports = [ require("./CCSprite"), require("./CCWidget"), require("./CCCanvas"), require("./CCAnimation"), require("./CCLabel"), require("./CCLayout"), require("./CCSpriteDistortion"), require("./CCLabelOutline") ];
+        module.exports = [ require("./CCSprite"), require("./CCWidget"), require("./CCCanvas"), require("./CCAnimation"), require("./CCButton"), require("./CCLabel"), require("./CCLayout"), require("./CCLabelOutline") ];
     }, {
-        "./CCAnimation": 33,
+        "./CCAnimation": 32,
+        "./CCButton": 33,
         "./CCCanvas": 34,
         "./CCComponent": 35,
         "./CCComponentEventHandler": 36,
@@ -10858,11 +10047,10 @@ var _ccsg = global._ccsg;
         "./CCRendererInSG": 40,
         "./CCRendererUnderSG": 41,
         "./CCSprite": 43,
-        "./CCSpriteDistortion": 44,
-        "./CCWidget": 45,
-        "./missing-script": 47
+        "./CCWidget": 44,
+        "./missing-script": 46
     } ],
-    47: [ function(require, module, exports) {
+    46: [ function(require, module, exports) {
         var JS = cc.js;
         var MissingClass = cc.Class({
             name: "cc.MissingClass",
@@ -10911,7 +10099,1284 @@ var _ccsg = global._ccsg;
         });
         cc._MissingScript = module.exports = MissingScript;
     }, {} ],
+    47: [ function(require, module, exports) {
+        cc.EventListener = cc._Class.extend({
+            _onEvent: null,
+            _type: 0,
+            _listenerID: null,
+            _registered: false,
+            _fixedPriority: 0,
+            _node: null,
+            _target: null,
+            _paused: true,
+            _isEnabled: true,
+            ctor: function(type, listenerID, callback) {
+                this._onEvent = callback;
+                this._type = type || 0;
+                this._listenerID = listenerID || "";
+            },
+            _setPaused: function(paused) {
+                this._paused = paused;
+            },
+            _isPaused: function() {
+                return this._paused;
+            },
+            _setRegistered: function(registered) {
+                this._registered = registered;
+            },
+            _isRegistered: function() {
+                return this._registered;
+            },
+            _getType: function() {
+                return this._type;
+            },
+            _getListenerID: function() {
+                return this._listenerID;
+            },
+            _setFixedPriority: function(fixedPriority) {
+                this._fixedPriority = fixedPriority;
+            },
+            _getFixedPriority: function() {
+                return this._fixedPriority;
+            },
+            _setSceneGraphPriority: function(node) {
+                this._target = node;
+                this._node = node;
+            },
+            _getSceneGraphPriority: function() {
+                return this._node;
+            },
+            checkAvailable: function() {
+                return null !== this._onEvent;
+            },
+            clone: function() {
+                return null;
+            },
+            setEnabled: function(enabled) {
+                this._isEnabled = enabled;
+            },
+            isEnabled: function() {
+                return this._isEnabled;
+            },
+            retain: function() {},
+            release: function() {}
+        });
+        cc.EventListener.UNKNOWN = 0;
+        cc.EventListener.TOUCH_ONE_BY_ONE = 1;
+        cc.EventListener.TOUCH_ALL_AT_ONCE = 2;
+        cc.EventListener.KEYBOARD = 3;
+        cc.EventListener.MOUSE = 4;
+        cc.EventListener.ACCELERATION = 6;
+        cc.EventListener.FOCUS = 7;
+        cc.EventListener.CUSTOM = 8;
+        cc._EventListenerCustom = cc.EventListener.extend({
+            _onCustomEvent: null,
+            ctor: function(listenerId, callback) {
+                this._onCustomEvent = callback;
+                var selfPointer = this;
+                var listener = function(event) {
+                    null !== selfPointer._onCustomEvent && selfPointer._onCustomEvent(event);
+                };
+                cc.EventListener.prototype.ctor.call(this, cc.EventListener.CUSTOM, listenerId, listener);
+            },
+            checkAvailable: function() {
+                return cc.EventListener.prototype.checkAvailable.call(this) && null !== this._onCustomEvent;
+            },
+            clone: function() {
+                return new cc._EventListenerCustom(this._listenerID, this._onCustomEvent);
+            }
+        });
+        cc._EventListenerMouse = cc.EventListener.extend({
+            onMouseDown: null,
+            onMouseUp: null,
+            onMouseMove: null,
+            onMouseScroll: null,
+            ctor: function() {
+                var selfPointer = this;
+                var listener = function(event) {
+                    var eventType = cc.Event.EventMouse;
+                    switch (event._eventType) {
+                      case eventType.DOWN:
+                        selfPointer.onMouseDown && selfPointer.onMouseDown(event);
+                        break;
+
+                      case eventType.UP:
+                        selfPointer.onMouseUp && selfPointer.onMouseUp(event);
+                        break;
+
+                      case eventType.MOVE:
+                        selfPointer.onMouseMove && selfPointer.onMouseMove(event);
+                        break;
+
+                      case eventType.SCROLL:
+                        selfPointer.onMouseScroll && selfPointer.onMouseScroll(event);
+                    }
+                };
+                cc.EventListener.prototype.ctor.call(this, cc.EventListener.MOUSE, cc._EventListenerMouse.LISTENER_ID, listener);
+            },
+            clone: function() {
+                var eventListener = new cc._EventListenerMouse();
+                eventListener.onMouseDown = this.onMouseDown;
+                eventListener.onMouseUp = this.onMouseUp;
+                eventListener.onMouseMove = this.onMouseMove;
+                eventListener.onMouseScroll = this.onMouseScroll;
+                return eventListener;
+            },
+            checkAvailable: function() {
+                return true;
+            }
+        });
+        cc._EventListenerMouse.LISTENER_ID = "__cc_mouse";
+        cc._EventListenerTouchOneByOne = cc.EventListener.extend({
+            _claimedTouches: null,
+            swallowTouches: false,
+            onTouchBegan: null,
+            onTouchMoved: null,
+            onTouchEnded: null,
+            onTouchCancelled: null,
+            ctor: function() {
+                cc.EventListener.prototype.ctor.call(this, cc.EventListener.TOUCH_ONE_BY_ONE, cc._EventListenerTouchOneByOne.LISTENER_ID, null);
+                this._claimedTouches = [];
+            },
+            setSwallowTouches: function(needSwallow) {
+                this.swallowTouches = needSwallow;
+            },
+            isSwallowTouches: function() {
+                return this.swallowTouches;
+            },
+            clone: function() {
+                var eventListener = new cc._EventListenerTouchOneByOne();
+                eventListener.onTouchBegan = this.onTouchBegan;
+                eventListener.onTouchMoved = this.onTouchMoved;
+                eventListener.onTouchEnded = this.onTouchEnded;
+                eventListener.onTouchCancelled = this.onTouchCancelled;
+                eventListener.swallowTouches = this.swallowTouches;
+                return eventListener;
+            },
+            checkAvailable: function() {
+                if (!this.onTouchBegan) {
+                    cc.log(cc._LogInfos._checkEventListenerAvailable.touchOneByOne);
+                    return false;
+                }
+                return true;
+            }
+        });
+        cc._EventListenerTouchOneByOne.LISTENER_ID = "__cc_touch_one_by_one";
+        cc._EventListenerTouchAllAtOnce = cc.EventListener.extend({
+            onTouchesBegan: null,
+            onTouchesMoved: null,
+            onTouchesEnded: null,
+            onTouchesCancelled: null,
+            ctor: function() {
+                cc.EventListener.prototype.ctor.call(this, cc.EventListener.TOUCH_ALL_AT_ONCE, cc._EventListenerTouchAllAtOnce.LISTENER_ID, null);
+            },
+            clone: function() {
+                var eventListener = new cc._EventListenerTouchAllAtOnce();
+                eventListener.onTouchesBegan = this.onTouchesBegan;
+                eventListener.onTouchesMoved = this.onTouchesMoved;
+                eventListener.onTouchesEnded = this.onTouchesEnded;
+                eventListener.onTouchesCancelled = this.onTouchesCancelled;
+                return eventListener;
+            },
+            checkAvailable: function() {
+                if (null === this.onTouchesBegan && null === this.onTouchesMoved && null === this.onTouchesEnded && null === this.onTouchesCancelled) {
+                    cc.log(cc._LogInfos._checkEventListenerAvailable.touchAllAtOnce);
+                    return false;
+                }
+                return true;
+            }
+        });
+        cc._EventListenerTouchAllAtOnce.LISTENER_ID = "__cc_touch_all_at_once";
+        cc.EventListener.create = function(argObj) {
+            cc.assert(argObj && argObj.event, cc._LogInfos.EventListener.create);
+            var listenerType = argObj.event;
+            delete argObj.event;
+            var listener = null;
+            if (listenerType === cc.EventListener.TOUCH_ONE_BY_ONE) {
+                listener = new cc._EventListenerTouchOneByOne();
+            } else {
+                if (listenerType === cc.EventListener.TOUCH_ALL_AT_ONCE) {
+                    listener = new cc._EventListenerTouchAllAtOnce();
+                } else {
+                    if (listenerType === cc.EventListener.MOUSE) {
+                        listener = new cc._EventListenerMouse();
+                    } else {
+                        if (listenerType === cc.EventListener.CUSTOM) {
+                            listener = new cc._EventListenerCustom(argObj.eventName, argObj.callback);
+                            delete argObj.eventName;
+                            delete argObj.callback;
+                        } else {
+                            if (listenerType === cc.EventListener.KEYBOARD) {
+                                listener = new cc._EventListenerKeyboard();
+                            } else {
+                                if (listenerType === cc.EventListener.ACCELERATION) {
+                                    listener = new cc._EventListenerAcceleration(argObj.callback);
+                                    delete argObj.callback;
+                                } else {
+                                    listenerType === cc.EventListener.FOCUS && (listener = new cc._EventListenerFocus());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            for (var key in argObj) {
+                listener[key] = argObj[key];
+            }
+            return listener;
+        };
+        cc._EventListenerFocus = cc.EventListener.extend({
+            clone: function() {
+                var listener = new cc._EventListenerFocus();
+                listener.onFocusChanged = this.onFocusChanged;
+                return listener;
+            },
+            checkAvailable: function() {
+                if (!this.onFocusChanged) {
+                    cc.log("Invalid EventListenerFocus!");
+                    return false;
+                }
+                return true;
+            },
+            onFocusChanged: null,
+            ctor: function() {
+                var listener = function(event) {
+                    this.onFocusChanged && this.onFocusChanged(event._widgetLoseFocus, event._widgetGetFocus);
+                };
+                cc.EventListener.prototype.ctor.call(this, cc.EventListener.FOCUS, cc._EventListenerFocus.LISTENER_ID, listener);
+            }
+        });
+        cc._EventListenerFocus.LISTENER_ID = "__cc_focus_event";
+        cc._EventListenerAcceleration = cc.EventListener.extend({
+            _onAccelerationEvent: null,
+            ctor: function(callback) {
+                this._onAccelerationEvent = callback;
+                var selfPointer = this;
+                var listener = function(event) {
+                    selfPointer._onAccelerationEvent(event._acc, event);
+                };
+                cc.EventListener.prototype.ctor.call(this, cc.EventListener.ACCELERATION, cc._EventListenerAcceleration.LISTENER_ID, listener);
+            },
+            checkAvailable: function() {
+                cc.assert(this._onAccelerationEvent, cc._LogInfos._checkEventListenerAvailable.acceleration);
+                return true;
+            },
+            clone: function() {
+                return new cc._EventListenerAcceleration(this._onAccelerationEvent);
+            }
+        });
+        cc._EventListenerAcceleration.LISTENER_ID = "__cc_acceleration";
+        cc._EventListenerKeyboard = cc.EventListener.extend({
+            onKeyPressed: null,
+            onKeyReleased: null,
+            ctor: function() {
+                var selfPointer = this;
+                var listener = function(event) {
+                    event._isPressed ? selfPointer.onKeyPressed && selfPointer.onKeyPressed(event._keyCode, event) : selfPointer.onKeyReleased && selfPointer.onKeyReleased(event._keyCode, event);
+                };
+                cc.EventListener.prototype.ctor.call(this, cc.EventListener.KEYBOARD, cc._EventListenerKeyboard.LISTENER_ID, listener);
+            },
+            clone: function() {
+                var eventListener = new cc._EventListenerKeyboard();
+                eventListener.onKeyPressed = this.onKeyPressed;
+                eventListener.onKeyReleased = this.onKeyReleased;
+                return eventListener;
+            },
+            checkAvailable: function() {
+                if (null === this.onKeyPressed && null === this.onKeyReleased) {
+                    cc.log(cc._LogInfos._checkEventListenerAvailable.keyboard);
+                    return false;
+                }
+                return true;
+            }
+        });
+        cc._EventListenerKeyboard.LISTENER_ID = "__cc_keyboard";
+    }, {} ],
     48: [ function(require, module, exports) {
+        var _EventListenerVector = cc._Class.extend({
+            _fixedListeners: null,
+            _sceneGraphListeners: null,
+            gt0Index: 0,
+            ctor: function() {
+                this._fixedListeners = [];
+                this._sceneGraphListeners = [];
+            },
+            size: function() {
+                return this._fixedListeners.length + this._sceneGraphListeners.length;
+            },
+            empty: function() {
+                return 0 === this._fixedListeners.length && 0 === this._sceneGraphListeners.length;
+            },
+            push: function(listener) {
+                0 === listener._getFixedPriority() ? this._sceneGraphListeners.push(listener) : this._fixedListeners.push(listener);
+            },
+            clearSceneGraphListeners: function() {
+                this._sceneGraphListeners.length = 0;
+            },
+            clearFixedListeners: function() {
+                this._fixedListeners.length = 0;
+            },
+            clear: function() {
+                this._sceneGraphListeners.length = 0;
+                this._fixedListeners.length = 0;
+            },
+            getFixedPriorityListeners: function() {
+                return this._fixedListeners;
+            },
+            getSceneGraphPriorityListeners: function() {
+                return this._sceneGraphListeners;
+            }
+        });
+        var __getListenerID = function(event) {
+            var eventType = cc.Event, type = event.getType();
+            if (type === eventType.ACCELERATION) {
+                return cc._EventListenerAcceleration.LISTENER_ID;
+            }
+            if (type === eventType.KEYBOARD) {
+                return cc._EventListenerKeyboard.LISTENER_ID;
+            }
+            if (type.startsWith(eventType.MOUSE)) {
+                return cc._EventListenerMouse.LISTENER_ID;
+            }
+            if (type === eventType.FOCUS) {
+                return cc._EventListenerFocus.LISTENER_ID;
+            }
+            type.startsWith(eventType.TOUCH) && cc.log(cc._LogInfos._getListenerID);
+            return type;
+        };
+        cc.eventManager = {
+            DIRTY_NONE: 0,
+            DIRTY_FIXED_PRIORITY: 1,
+            DIRTY_SCENE_GRAPH_PRIORITY: 2,
+            DIRTY_ALL: 3,
+            _listenersMap: {},
+            _priorityDirtyFlagMap: {},
+            _nodeListenersMap: {},
+            _nodePriorityMap: {},
+            _globalZOrderNodeMap: {},
+            _toAddedListeners: [],
+            _toRemovedListeners: [],
+            _dirtyNodes: [],
+            _inDispatch: 0,
+            _isEnabled: false,
+            _nodePriorityIndex: 0,
+            _internalCustomListenerIDs: [],
+            _setDirtyForNode: function(node) {
+                void 0 !== this._nodeListenersMap[node.__instanceId] && this._dirtyNodes.push(node);
+                if (node.getChildren) {
+                    var _children = node.getChildren();
+                    for (var i = 0, len = _children.length; i < len; i++) {
+                        this._setDirtyForNode(_children[i]);
+                    }
+                }
+            },
+            pauseTarget: function(node, recursive) {
+                var listeners = this._nodeListenersMap[node.__instanceId], i, len;
+                if (listeners) {
+                    for (i = 0, len = listeners.length; i < len; i++) {
+                        listeners[i]._setPaused(true);
+                    }
+                }
+                if (true === recursive) {
+                    var locChildren = node.getChildren();
+                    for (i = 0, len = locChildren.length; i < len; i++) {
+                        this.pauseTarget(locChildren[i], true);
+                    }
+                }
+            },
+            resumeTarget: function(node, recursive) {
+                var listeners = this._nodeListenersMap[node.__instanceId], i, len;
+                if (listeners) {
+                    for (i = 0, len = listeners.length; i < len; i++) {
+                        listeners[i]._setPaused(false);
+                    }
+                }
+                this._setDirtyForNode(node);
+                if (true === recursive && node.getChildren) {
+                    var locChildren = node.getChildren();
+                    for (i = 0, len = locChildren.length; i < len; i++) {
+                        this.resumeTarget(locChildren[i], true);
+                    }
+                }
+            },
+            _addListener: function(listener) {
+                0 === this._inDispatch ? this._forceAddEventListener(listener) : this._toAddedListeners.push(listener);
+            },
+            _forceAddEventListener: function(listener) {
+                var listenerID = listener._getListenerID();
+                var listeners = this._listenersMap[listenerID];
+                if (!listeners) {
+                    listeners = new _EventListenerVector();
+                    this._listenersMap[listenerID] = listeners;
+                }
+                listeners.push(listener);
+                if (0 === listener._getFixedPriority()) {
+                    this._setDirty(listenerID, this.DIRTY_SCENE_GRAPH_PRIORITY);
+                    var node = listener._getSceneGraphPriority();
+                    null === node && cc.log(cc._LogInfos.EventManager._forceAddEventListener);
+                    this._associateNodeAndEventListener(node, listener);
+                    node.isRunning() && this.resumeTarget(node);
+                } else {
+                    this._setDirty(listenerID, this.DIRTY_FIXED_PRIORITY);
+                }
+            },
+            _getListeners: function(listenerID) {
+                return this._listenersMap[listenerID];
+            },
+            _updateDirtyFlagForSceneGraph: function() {
+                if (0 === this._dirtyNodes.length) {
+                    return;
+                }
+                var locDirtyNodes = this._dirtyNodes, selListeners, selListener, locNodeListenersMap = this._nodeListenersMap;
+                for (var i = 0, len = locDirtyNodes.length; i < len; i++) {
+                    selListeners = locNodeListenersMap[locDirtyNodes[i].__instanceId];
+                    if (selListeners) {
+                        for (var j = 0, listenersLen = selListeners.length; j < listenersLen; j++) {
+                            selListener = selListeners[j];
+                            selListener && this._setDirty(selListener._getListenerID(), this.DIRTY_SCENE_GRAPH_PRIORITY);
+                        }
+                    }
+                }
+                this._dirtyNodes.length = 0;
+            },
+            _removeAllListenersInVector: function(listenerVector) {
+                if (!listenerVector) {
+                    return;
+                }
+                var selListener;
+                for (var i = 0; i < listenerVector.length; ) {
+                    selListener = listenerVector[i];
+                    selListener._setRegistered(false);
+                    if (null != selListener._getSceneGraphPriority()) {
+                        this._dissociateNodeAndEventListener(selListener._getSceneGraphPriority(), selListener);
+                        selListener._setSceneGraphPriority(null);
+                    }
+                    0 === this._inDispatch ? cc.js.array.remove(listenerVector, selListener) : ++i;
+                }
+            },
+            _removeListenersForListenerID: function(listenerID) {
+                var listeners = this._listenersMap[listenerID], i;
+                if (listeners) {
+                    var fixedPriorityListeners = listeners.getFixedPriorityListeners();
+                    var sceneGraphPriorityListeners = listeners.getSceneGraphPriorityListeners();
+                    this._removeAllListenersInVector(sceneGraphPriorityListeners);
+                    this._removeAllListenersInVector(fixedPriorityListeners);
+                    delete this._priorityDirtyFlagMap[listenerID];
+                    if (!this._inDispatch) {
+                        listeners.clear();
+                        delete this._listenersMap[listenerID];
+                    }
+                }
+                var locToAddedListeners = this._toAddedListeners, listener;
+                for (i = 0; i < locToAddedListeners.length; ) {
+                    listener = locToAddedListeners[i];
+                    listener && listener._getListenerID() === listenerID ? cc.js.array.remove(locToAddedListeners, listener) : ++i;
+                }
+            },
+            _sortEventListeners: function(listenerID) {
+                var dirtyFlag = this.DIRTY_NONE, locFlagMap = this._priorityDirtyFlagMap;
+                locFlagMap[listenerID] && (dirtyFlag = locFlagMap[listenerID]);
+                if (dirtyFlag !== this.DIRTY_NONE) {
+                    locFlagMap[listenerID] = this.DIRTY_NONE;
+                    dirtyFlag & this.DIRTY_FIXED_PRIORITY && this._sortListenersOfFixedPriority(listenerID);
+                    if (dirtyFlag & this.DIRTY_SCENE_GRAPH_PRIORITY) {
+                        var rootEntity = cc.director.getScene();
+                        rootEntity && this._sortListenersOfSceneGraphPriority(listenerID, rootEntity);
+                    }
+                }
+            },
+            _sortListenersOfSceneGraphPriority: function(listenerID, rootNode) {
+                var listeners = this._getListeners(listenerID);
+                if (!listeners) {
+                    return;
+                }
+                var sceneGraphListener = listeners.getSceneGraphPriorityListeners();
+                if (!sceneGraphListener || 0 === sceneGraphListener.length) {
+                    return;
+                }
+                this._nodePriorityIndex = 0;
+                this._nodePriorityMap = {};
+                this._visitTarget(rootNode, true);
+                listeners.getSceneGraphPriorityListeners().sort(this._sortEventListenersOfSceneGraphPriorityDes);
+            },
+            _sortEventListenersOfSceneGraphPriorityDes: function(l1, l2) {
+                var locNodePriorityMap = cc.eventManager._nodePriorityMap, node1 = l1._getSceneGraphPriority(), node2 = l2._getSceneGraphPriority();
+                if (!(l2 && node2 && locNodePriorityMap[node2.__instanceId])) {
+                    return -1;
+                }
+                if (!l1 || !node1 || !locNodePriorityMap[node1.__instanceId]) {
+                    return 1;
+                }
+                return locNodePriorityMap[node2.__instanceId] - locNodePriorityMap[node1.__instanceId];
+            },
+            _sortListenersOfFixedPriority: function(listenerID) {
+                var listeners = this._listenersMap[listenerID];
+                if (!listeners) {
+                    return;
+                }
+                var fixedListeners = listeners.getFixedPriorityListeners();
+                if (!fixedListeners || 0 === fixedListeners.length) {
+                    return;
+                }
+                fixedListeners.sort(this._sortListenersOfFixedPriorityAsc);
+                var index = 0;
+                for (var len = fixedListeners.length; index < len; ) {
+                    if (fixedListeners[index]._getFixedPriority() >= 0) {
+                        break;
+                    }
+                    ++index;
+                }
+                listeners.gt0Index = index;
+            },
+            _sortListenersOfFixedPriorityAsc: function(l1, l2) {
+                return l1._getFixedPriority() - l2._getFixedPriority();
+            },
+            _onUpdateListeners: function(listenerID) {
+                var listeners = this._listenersMap[listenerID];
+                if (!listeners) {
+                    return;
+                }
+                var fixedPriorityListeners = listeners.getFixedPriorityListeners();
+                var sceneGraphPriorityListeners = listeners.getSceneGraphPriorityListeners();
+                var i, selListener, idx, toRemovedListeners = this._toRemovedListeners;
+                if (sceneGraphPriorityListeners) {
+                    for (i = 0; i < sceneGraphPriorityListeners.length; ) {
+                        selListener = sceneGraphPriorityListeners[i];
+                        if (selListener._isRegistered()) {
+                            ++i;
+                        } else {
+                            cc.js.array.remove(sceneGraphPriorityListeners, selListener);
+                            idx = toRemovedListeners.indexOf(selListener);
+                            idx !== -1 && toRemovedListeners.splice(idx, 1);
+                        }
+                    }
+                }
+                if (fixedPriorityListeners) {
+                    for (i = 0; i < fixedPriorityListeners.length; ) {
+                        selListener = fixedPriorityListeners[i];
+                        if (selListener._isRegistered()) {
+                            ++i;
+                        } else {
+                            cc.js.array.remove(fixedPriorityListeners, selListener);
+                            idx = toRemovedListeners.indexOf(selListener);
+                            idx !== -1 && toRemovedListeners.splice(idx, 1);
+                        }
+                    }
+                }
+                sceneGraphPriorityListeners && 0 === sceneGraphPriorityListeners.length && listeners.clearSceneGraphListeners();
+                fixedPriorityListeners && 0 === fixedPriorityListeners.length && listeners.clearFixedListeners();
+            },
+            _updateListeners: function(event) {
+                var locInDispatch = this._inDispatch;
+                cc.assert(locInDispatch > 0, cc._LogInfos.EventManager._updateListeners);
+                if (locInDispatch > 1) {
+                    return;
+                }
+                if (event.getType().startsWith(cc.Event.TOUCH)) {
+                    this._onUpdateListeners(cc._EventListenerTouchOneByOne.LISTENER_ID);
+                    this._onUpdateListeners(cc._EventListenerTouchAllAtOnce.LISTENER_ID);
+                } else {
+                    this._onUpdateListeners(__getListenerID(event));
+                }
+                cc.assert(1 === locInDispatch, cc._LogInfos.EventManager._updateListeners_2);
+                var locListenersMap = this._listenersMap, locPriorityDirtyFlagMap = this._priorityDirtyFlagMap;
+                for (var selKey in locListenersMap) {
+                    if (locListenersMap[selKey].empty()) {
+                        delete locPriorityDirtyFlagMap[selKey];
+                        delete locListenersMap[selKey];
+                    }
+                }
+                var locToAddedListeners = this._toAddedListeners;
+                if (0 !== locToAddedListeners.length) {
+                    for (var i = 0, len = locToAddedListeners.length; i < len; i++) {
+                        this._forceAddEventListener(locToAddedListeners[i]);
+                    }
+                    this._toAddedListeners.length = 0;
+                }
+                0 !== this._toRemovedListeners.length && this._cleanToRemovedListeners();
+            },
+            _cleanToRemovedListeners: function() {
+                var toRemovedListeners = this._toRemovedListeners;
+                for (var i = 0; i < toRemovedListeners.length; i++) {
+                    var selListener = toRemovedListeners[i];
+                    var listeners = this._listenersMap[selListener._getListenerID()];
+                    if (!listeners) {
+                        continue;
+                    }
+                    var idx, fixedPriorityListeners = listeners.getFixedPriorityListeners(), sceneGraphPriorityListeners = listeners.getSceneGraphPriorityListeners();
+                    if (sceneGraphPriorityListeners) {
+                        idx = sceneGraphPriorityListeners.indexOf(selListener);
+                        sceneGraphPriorityListeners.splice(idx, 1);
+                    }
+                    if (fixedPriorityListeners) {
+                        idx = fixedPriorityListeners.indexOf(selListener);
+                        fixedPriorityListeners.splice(idx, 1);
+                    }
+                }
+                toRemovedListeners.length = 0;
+            },
+            _onTouchEventCallback: function(listener, argsObj) {
+                if (!listener._isRegistered) {
+                    return false;
+                }
+                var event = argsObj.event, selTouch = event.currentTouch;
+                event.currentTarget = listener._node;
+                var isClaimed = false, removedIdx;
+                var getCode = event.getEventCode(), EventTouch = cc.Event.EventTouch;
+                if (getCode === EventTouch.BEGAN) {
+                    if (listener.onTouchBegan) {
+                        isClaimed = listener.onTouchBegan(selTouch, event);
+                        isClaimed && listener._registered && listener._claimedTouches.push(selTouch);
+                    }
+                } else {
+                    if (listener._claimedTouches.length > 0 && (removedIdx = listener._claimedTouches.indexOf(selTouch)) !== -1) {
+                        isClaimed = true;
+                        if (getCode === EventTouch.MOVED && listener.onTouchMoved) {
+                            listener.onTouchMoved(selTouch, event);
+                        } else {
+                            if (getCode === EventTouch.ENDED) {
+                                listener.onTouchEnded && listener.onTouchEnded(selTouch, event);
+                                listener._registered && listener._claimedTouches.splice(removedIdx, 1);
+                            } else {
+                                if (getCode === EventTouch.CANCELLED) {
+                                    listener.onTouchCancelled && listener.onTouchCancelled(selTouch, event);
+                                    listener._registered && listener._claimedTouches.splice(removedIdx, 1);
+                                }
+                            }
+                        }
+                    }
+                }
+                if (event.isStopped()) {
+                    cc.eventManager._updateListeners(event);
+                    return true;
+                }
+                if (isClaimed && listener._registered && listener.swallowTouches) {
+                    argsObj.needsMutableSet && argsObj.touches.splice(selTouch, 1);
+                    return true;
+                }
+                return false;
+            },
+            _dispatchTouchEvent: function(event) {
+                this._sortEventListeners(cc._EventListenerTouchOneByOne.LISTENER_ID);
+                this._sortEventListeners(cc._EventListenerTouchAllAtOnce.LISTENER_ID);
+                var oneByOneListeners = this._getListeners(cc._EventListenerTouchOneByOne.LISTENER_ID);
+                var allAtOnceListeners = this._getListeners(cc._EventListenerTouchAllAtOnce.LISTENER_ID);
+                if (null === oneByOneListeners && null === allAtOnceListeners) {
+                    return;
+                }
+                var originalTouches = event.getTouches(), mutableTouches = cc.js.array.copy(originalTouches);
+                var oneByOneArgsObj = {
+                    event: event,
+                    needsMutableSet: oneByOneListeners && allAtOnceListeners,
+                    touches: mutableTouches,
+                    selTouch: null
+                };
+                if (oneByOneListeners) {
+                    for (var i = 0; i < originalTouches.length; i++) {
+                        event.currentTouch = originalTouches[i];
+                        this._dispatchEventToListeners(oneByOneListeners, this._onTouchEventCallback, oneByOneArgsObj);
+                        if (event.isStopped()) {
+                            return;
+                        }
+                    }
+                }
+                if (allAtOnceListeners && mutableTouches.length > 0) {
+                    this._dispatchEventToListeners(allAtOnceListeners, this._onTouchesEventCallback, {
+                        event: event,
+                        touches: mutableTouches
+                    });
+                    if (event.isStopped()) {
+                        return;
+                    }
+                }
+                this._updateListeners(event);
+            },
+            _onTouchesEventCallback: function(listener, callbackParams) {
+                if (!listener._registered) {
+                    return false;
+                }
+                var EventTouch = cc.Event.EventTouch, event = callbackParams.event, touches = callbackParams.touches, getCode = event.getEventCode();
+                event.currentTarget = listener._node;
+                getCode === EventTouch.BEGAN && listener.onTouchesBegan ? listener.onTouchesBegan(touches, event) : getCode === EventTouch.MOVED && listener.onTouchesMoved ? listener.onTouchesMoved(touches, event) : getCode === EventTouch.ENDED && listener.onTouchesEnded ? listener.onTouchesEnded(touches, event) : getCode === EventTouch.CANCELLED && listener.onTouchesCancelled && listener.onTouchesCancelled(touches, event);
+                if (event.isStopped()) {
+                    cc.eventManager._updateListeners(event);
+                    return true;
+                }
+                return false;
+            },
+            _associateNodeAndEventListener: function(node, listener) {
+                var listeners = this._nodeListenersMap[node.__instanceId];
+                if (!listeners) {
+                    listeners = [];
+                    this._nodeListenersMap[node.__instanceId] = listeners;
+                }
+                listeners.push(listener);
+            },
+            _dissociateNodeAndEventListener: function(node, listener) {
+                var listeners = this._nodeListenersMap[node.__instanceId];
+                if (listeners) {
+                    cc.js.array.remove(listeners, listener);
+                    0 === listeners.length && delete this._nodeListenersMap[node.__instanceId];
+                }
+            },
+            _dispatchEventToListeners: function(listeners, onEvent, eventOrArgs) {
+                var shouldStopPropagation = false;
+                var fixedPriorityListeners = listeners.getFixedPriorityListeners();
+                var sceneGraphPriorityListeners = listeners.getSceneGraphPriorityListeners();
+                var i = 0, j, selListener;
+                if (fixedPriorityListeners && 0 !== fixedPriorityListeners.length) {
+                    for (;i < listeners.gt0Index; ++i) {
+                        selListener = fixedPriorityListeners[i];
+                        if (selListener.isEnabled() && !selListener._isPaused() && selListener._isRegistered() && onEvent(selListener, eventOrArgs)) {
+                            shouldStopPropagation = true;
+                            break;
+                        }
+                    }
+                }
+                if (sceneGraphPriorityListeners && !shouldStopPropagation) {
+                    for (j = 0; j < sceneGraphPriorityListeners.length; j++) {
+                        selListener = sceneGraphPriorityListeners[j];
+                        if (selListener.isEnabled() && !selListener._isPaused() && selListener._isRegistered() && onEvent(selListener, eventOrArgs)) {
+                            shouldStopPropagation = true;
+                            break;
+                        }
+                    }
+                }
+                if (fixedPriorityListeners && !shouldStopPropagation) {
+                    for (;i < fixedPriorityListeners.length; ++i) {
+                        selListener = fixedPriorityListeners[i];
+                        if (selListener.isEnabled() && !selListener._isPaused() && selListener._isRegistered() && onEvent(selListener, eventOrArgs)) {
+                            shouldStopPropagation = true;
+                            break;
+                        }
+                    }
+                }
+            },
+            _setDirty: function(listenerID, flag) {
+                var locDirtyFlagMap = this._priorityDirtyFlagMap;
+                null == locDirtyFlagMap[listenerID] ? locDirtyFlagMap[listenerID] = flag : locDirtyFlagMap[listenerID] = flag | locDirtyFlagMap[listenerID];
+            },
+            _visitTarget: function(node, isRootNode) {
+                node._reorderChildDirty && node.sortAllChildren();
+                var children = node.getChildren(), i = 0;
+                var childrenCount = children.length, locGlobalZOrderNodeMap = this._globalZOrderNodeMap, locNodeListenersMap = this._nodeListenersMap;
+                if (childrenCount > 0) {
+                    var child;
+                    for (;i < childrenCount; i++) {
+                        child = children[i];
+                        if (!(child && child.getLocalZOrder() < 0)) {
+                            break;
+                        }
+                        this._visitTarget(child, false);
+                    }
+                    if (void 0 !== locNodeListenersMap[node.__instanceId]) {
+                        locGlobalZOrderNodeMap[node.getGlobalZOrder()] || (locGlobalZOrderNodeMap[node.getGlobalZOrder()] = []);
+                        locGlobalZOrderNodeMap[node.getGlobalZOrder()].push(node.__instanceId);
+                    }
+                    for (;i < childrenCount; i++) {
+                        child = children[i];
+                        child && this._visitTarget(child, false);
+                    }
+                } else {
+                    if (void 0 !== locNodeListenersMap[node.__instanceId]) {
+                        locGlobalZOrderNodeMap[node.getGlobalZOrder()] || (locGlobalZOrderNodeMap[node.getGlobalZOrder()] = []);
+                        locGlobalZOrderNodeMap[node.getGlobalZOrder()].push(node.__instanceId);
+                    }
+                }
+                if (isRootNode) {
+                    var globalZOrders = [];
+                    for (var selKey in locGlobalZOrderNodeMap) {
+                        globalZOrders.push(selKey);
+                    }
+                    globalZOrders.sort(this._sortNumberAsc);
+                    var zOrdersLen = globalZOrders.length, selZOrders, j, locNodePriorityMap = this._nodePriorityMap;
+                    for (i = 0; i < zOrdersLen; i++) {
+                        selZOrders = locGlobalZOrderNodeMap[globalZOrders[i]];
+                        for (j = 0; j < selZOrders.length; j++) {
+                            locNodePriorityMap[selZOrders[j]] = ++this._nodePriorityIndex;
+                        }
+                    }
+                    this._globalZOrderNodeMap = {};
+                }
+            },
+            _sortNumberAsc: function(a, b) {
+                return a - b;
+            },
+            addListener: function(listener, nodeOrPriority) {
+                cc.assert(listener && nodeOrPriority, cc._LogInfos.EventManager.addListener_2);
+                if (listener instanceof cc.EventListener) {
+                    if (listener._isRegistered()) {
+                        cc.log(cc._LogInfos.EventManager.addListener_4);
+                        return;
+                    }
+                } else {
+                    cc.assert(!cc.js.isNumber(nodeOrPriority), cc._LogInfos.EventManager.addListener_3);
+                    listener = cc.EventListener.create(listener);
+                }
+                if (!listener.checkAvailable()) {
+                    return;
+                }
+                if (cc.js.isNumber(nodeOrPriority)) {
+                    if (0 === nodeOrPriority) {
+                        cc.log(cc._LogInfos.EventManager.addListener);
+                        return;
+                    }
+                    listener._setSceneGraphPriority(null);
+                    listener._setFixedPriority(nodeOrPriority);
+                    listener._setRegistered(true);
+                    listener._setPaused(false);
+                    this._addListener(listener);
+                } else {
+                    listener._setSceneGraphPriority(nodeOrPriority);
+                    listener._setFixedPriority(0);
+                    listener._setRegistered(true);
+                    this._addListener(listener);
+                }
+                return listener;
+            },
+            addCustomListener: function(eventName, callback) {
+                var listener = new cc._EventListenerCustom(eventName, callback);
+                this.addListener(listener, 1);
+                return listener;
+            },
+            removeListener: function(listener) {
+                if (null == listener) {
+                    return;
+                }
+                var isFound, locListener = this._listenersMap;
+                for (var selKey in locListener) {
+                    var listeners = locListener[selKey];
+                    var fixedPriorityListeners = listeners.getFixedPriorityListeners(), sceneGraphPriorityListeners = listeners.getSceneGraphPriorityListeners();
+                    isFound = this._removeListenerInVector(sceneGraphPriorityListeners, listener);
+                    if (isFound) {
+                        this._setDirty(listener._getListenerID(), this.DIRTY_SCENE_GRAPH_PRIORITY);
+                    } else {
+                        isFound = this._removeListenerInVector(fixedPriorityListeners, listener);
+                        isFound && this._setDirty(listener._getListenerID(), this.DIRTY_FIXED_PRIORITY);
+                    }
+                    if (listeners.empty()) {
+                        delete this._priorityDirtyFlagMap[listener._getListenerID()];
+                        delete locListener[selKey];
+                    }
+                    if (isFound) {
+                        break;
+                    }
+                }
+                if (!isFound) {
+                    var locToAddedListeners = this._toAddedListeners;
+                    for (var i = 0, len = locToAddedListeners.length; i < len; i++) {
+                        var selListener = locToAddedListeners[i];
+                        if (selListener === listener) {
+                            cc.js.array.remove(locToAddedListeners, selListener);
+                            selListener._setRegistered(false);
+                            break;
+                        }
+                    }
+                }
+            },
+            _removeListenerInCallback: function(listeners, callback) {
+                if (null == listeners) {
+                    return false;
+                }
+                for (var i = 0, len = listeners.length; i < len; i++) {
+                    var selListener = listeners[i];
+                    if (selListener._onCustomEvent === callback || selListener._onEvent === callback) {
+                        selListener._setRegistered(false);
+                        if (null != selListener._getSceneGraphPriority()) {
+                            this._dissociateNodeAndEventListener(selListener._getSceneGraphPriority(), selListener);
+                            selListener._setSceneGraphPriority(null);
+                        }
+                        0 === this._inDispatch ? cc.js.array.remove(listeners, selListener) : this._toRemovedListeners.push(selListener);
+                        return true;
+                    }
+                }
+                return false;
+            },
+            _removeListenerInVector: function(listeners, listener) {
+                if (null == listeners) {
+                    return false;
+                }
+                for (var i = 0, len = listeners.length; i < len; i++) {
+                    var selListener = listeners[i];
+                    if (selListener === listener) {
+                        selListener._setRegistered(false);
+                        if (null != selListener._getSceneGraphPriority()) {
+                            this._dissociateNodeAndEventListener(selListener._getSceneGraphPriority(), selListener);
+                            selListener._setSceneGraphPriority(null);
+                        }
+                        0 === this._inDispatch && cc.js.array.remove(listeners, selListener);
+                        return true;
+                    }
+                }
+                return false;
+            },
+            removeListeners: function(listenerType, recursive) {
+                var i, _t = this;
+                if (void 0 !== listenerType.__instanceId) {
+                    delete _t._nodePriorityMap[listenerType.__instanceId];
+                    cc.js.array.remove(_t._dirtyNodes, listenerType);
+                    var listeners = _t._nodeListenersMap[listenerType.__instanceId], i;
+                    if (listeners) {
+                        var listenersCopy = cc.js.array.copy(listeners);
+                        for (i = 0; i < listenersCopy.length; i++) {
+                            _t.removeListener(listenersCopy[i]);
+                        }
+                        delete _t._nodeListenersMap[listenerType.__instanceId];
+                    }
+                    var locToAddedListeners = _t._toAddedListeners;
+                    for (i = 0; i < locToAddedListeners.length; ) {
+                        var listener = locToAddedListeners[i];
+                        if (listener._getSceneGraphPriority() === listenerType) {
+                            listener._setSceneGraphPriority(null);
+                            listener._setRegistered(false);
+                            locToAddedListeners.splice(i, 1);
+                        } else {
+                            ++i;
+                        }
+                    }
+                    if (true === recursive) {
+                        var locChildren = listenerType.getChildren(), len;
+                        for (i = 0, len = locChildren.length; i < len; i++) {
+                            _t.removeListeners(locChildren[i], true);
+                        }
+                    }
+                } else {
+                    listenerType === cc.EventListener.TOUCH_ONE_BY_ONE ? _t._removeListenersForListenerID(cc._EventListenerTouchOneByOne.LISTENER_ID) : listenerType === cc.EventListener.TOUCH_ALL_AT_ONCE ? _t._removeListenersForListenerID(cc._EventListenerTouchAllAtOnce.LISTENER_ID) : listenerType === cc.EventListener.MOUSE ? _t._removeListenersForListenerID(cc._EventListenerMouse.LISTENER_ID) : listenerType === cc.EventListener.ACCELERATION ? _t._removeListenersForListenerID(cc._EventListenerAcceleration.LISTENER_ID) : listenerType === cc.EventListener.KEYBOARD ? _t._removeListenersForListenerID(cc._EventListenerKeyboard.LISTENER_ID) : cc.log(cc._LogInfos.EventManager.removeListeners);
+                }
+            },
+            removeCustomListeners: function(customEventName) {
+                this._removeListenersForListenerID(customEventName);
+            },
+            removeAllListeners: function() {
+                var locListeners = this._listenersMap, locInternalCustomEventIDs = this._internalCustomListenerIDs;
+                for (var selKey in locListeners) {
+                    locInternalCustomEventIDs.indexOf(selKey) === -1 && this._removeListenersForListenerID(selKey);
+                }
+            },
+            setPriority: function(listener, fixedPriority) {
+                if (null == listener) {
+                    return;
+                }
+                var locListeners = this._listenersMap;
+                for (var selKey in locListeners) {
+                    var selListeners = locListeners[selKey];
+                    var fixedPriorityListeners = selListeners.getFixedPriorityListeners();
+                    if (fixedPriorityListeners) {
+                        var found = fixedPriorityListeners.indexOf(listener);
+                        if (found !== -1) {
+                            null != listener._getSceneGraphPriority() && cc.log(cc._LogInfos.EventManager.setPriority);
+                            if (listener._getFixedPriority() !== fixedPriority) {
+                                listener._setFixedPriority(fixedPriority);
+                                this._setDirty(listener._getListenerID(), this.DIRTY_FIXED_PRIORITY);
+                            }
+                            return;
+                        }
+                    }
+                }
+            },
+            setEnabled: function(enabled) {
+                this._isEnabled = enabled;
+            },
+            isEnabled: function() {
+                return this._isEnabled;
+            },
+            dispatchEvent: function(event) {
+                if (!this._isEnabled) {
+                    return;
+                }
+                this._updateDirtyFlagForSceneGraph();
+                this._inDispatch++;
+                if (!event || !event.getType) {
+                    throw new Error("event is undefined");
+                }
+                if (event.getType().startsWith(cc.Event.TOUCH)) {
+                    this._dispatchTouchEvent(event);
+                    this._inDispatch--;
+                    return;
+                }
+                var listenerID = __getListenerID(event);
+                this._sortEventListeners(listenerID);
+                var selListeners = this._listenersMap[listenerID];
+                null != selListeners && this._dispatchEventToListeners(selListeners, this._onListenerCallback, event);
+                this._updateListeners(event);
+                this._inDispatch--;
+            },
+            _onListenerCallback: function(listener, event) {
+                event.currentTarget = listener._target;
+                listener._onEvent(event);
+                return event.isStopped();
+            },
+            dispatchCustomEvent: function(eventName, optionalUserData) {
+                var ev = new cc.Event.EventCustom(eventName);
+                ev.setUserData(optionalUserData);
+                this.dispatchEvent(ev);
+            }
+        };
+    }, {} ],
+    49: [ function(require, module, exports) {
+        var JS = cc.js;
+        var Event = cc.Event;
+        cc.Event.TOUCH = "touch";
+        cc.Event.MOUSE = "mouse";
+        cc.Event.KEYBOARD = "keyboard";
+        cc.Event.ACCELERATION = "acceleration";
+        var EventMouse = function(eventType, bubbles) {
+            cc.Event.call(this, cc.Event.MOUSE, bubbles);
+            this._eventType = eventType;
+            this._button = 0;
+            this._x = 0;
+            this._y = 0;
+            this._prevX = 0;
+            this._prevY = 0;
+            this._scrollX = 0;
+            this._scrollY = 0;
+        };
+        JS.extend(EventMouse, cc.Event);
+        JS.mixin(EventMouse.prototype, {
+            setScrollData: function(scrollX, scrollY) {
+                this._scrollX = scrollX;
+                this._scrollY = scrollY;
+            },
+            getScrollX: function() {
+                return this._scrollX;
+            },
+            getScrollY: function() {
+                return this._scrollY;
+            },
+            setLocation: function(x, y) {
+                this._x = x;
+                this._y = y;
+            },
+            getLocation: function() {
+                return {
+                    x: this._x,
+                    y: this._y
+                };
+            },
+            getLocationInView: function() {
+                return {
+                    x: this._x,
+                    y: cc.view._designResolutionSize.height - this._y
+                };
+            },
+            _setPrevCursor: function(x, y) {
+                this._prevX = x;
+                this._prevY = y;
+            },
+            getPreviousLocation: function() {
+                return {
+                    x: this._prevX,
+                    y: this._prevY
+                };
+            },
+            getDelta: function() {
+                return {
+                    x: this._x - this._prevX,
+                    y: this._y - this._prevY
+                };
+            },
+            getDeltaX: function() {
+                return this._x - this._prevX;
+            },
+            getDeltaY: function() {
+                return this._y - this._prevY;
+            },
+            setButton: function(button) {
+                this._button = button;
+            },
+            getButton: function() {
+                return this._button;
+            },
+            getLocationX: function() {
+                return this._x;
+            },
+            getLocationY: function() {
+                return this._y;
+            }
+        });
+        EventMouse.NONE = 0;
+        EventMouse.DOWN = 1;
+        EventMouse.UP = 2;
+        EventMouse.MOVE = 3;
+        EventMouse.SCROLL = 4;
+        EventMouse.BUTTON_LEFT = 0;
+        EventMouse.BUTTON_RIGHT = 2;
+        EventMouse.BUTTON_MIDDLE = 1;
+        EventMouse.BUTTON_4 = 3;
+        EventMouse.BUTTON_5 = 4;
+        EventMouse.BUTTON_6 = 5;
+        EventMouse.BUTTON_7 = 6;
+        EventMouse.BUTTON_8 = 7;
+        var EventTouch = function(touchArr, bubbles) {
+            cc.Event.call(this, cc.Event.TOUCH, bubbles);
+            this._eventCode = 0;
+            this._touches = touchArr || [];
+            this.currentTouch = null;
+        };
+        JS.extend(EventTouch, cc.Event);
+        JS.mixin(EventTouch.prototype, {
+            getEventCode: function() {
+                return this._eventCode;
+            },
+            getTouches: function() {
+                return this._touches;
+            },
+            _setEventCode: function(eventCode) {
+                this._eventCode = eventCode;
+            },
+            _setTouches: function(touches) {
+                this._touches = touches;
+            },
+            setLocation: function(x, y) {
+                this.touch && this.touch.setTouchInfo(this.touch.getID(), x, y);
+            },
+            getLocation: function() {
+                return this.touch ? this.touch.getLocation() : cc.v2();
+            },
+            getLocationInView: function() {
+                return this.touch ? this.touch.getLocationInView() : cc.v2();
+            },
+            getPreviousLocation: function() {
+                return this.touch ? this.touch.getPreviousLocation() : cc.v2();
+            },
+            getStartLocation: function() {
+                return this.touch ? this.touch.getStartLocation() : cc.v2();
+            },
+            getID: function() {
+                return this.touch ? this.touch.getID() : null;
+            },
+            getDelta: function() {
+                return this.touch ? this.touch.getDelta() : cc.v2();
+            },
+            getDeltaX: function() {
+                return this.touch ? this.touch.getDelta().x : 0;
+            },
+            getDeltaY: function() {
+                return this.touch ? this.touch.getDelta().y : 0;
+            },
+            getLocationX: function() {
+                return this.touch ? this.touch.getLocationX() : 0;
+            },
+            getLocationY: function() {
+                return this.touch ? this.touch.getLocationY() : 0;
+            }
+        });
+        EventTouch.MAX_TOUCHES = 5;
+        EventTouch.BEGAN = 0;
+        EventTouch.MOVED = 1;
+        EventTouch.ENDED = 2;
+        EventTouch.CANCELED = 3;
+        var EventAcceleration = function(acc, bubbles) {
+            cc.Event.call(this, Event.ACCELERATION, bubbles);
+            this._acc = acc;
+        };
+        JS.extend(EventAcceleration, cc.Event);
+        var EventKeyboard = function(keyCode, isPressed, bubbles) {
+            cc.Event.call(this, Event.KEYBOARD, bubbles);
+            this._keyCode = keyCode;
+            this._isPressed = isPressed;
+        };
+        JS.extend(EventKeyboard, cc.Event);
+        cc.Event.EventMouse = EventMouse;
+        cc.Event.EventTouch = EventTouch;
+        cc.Event.EventAcceleration = EventAcceleration;
+        cc.Event.EventKeyboard = EventKeyboard;
+        module.exports = Event;
+    }, {} ],
+    50: [ function(require, module, exports) {
+        cc.Touch = cc._Class.extend({
+            _point: null,
+            _prevPoint: null,
+            _id: 0,
+            _startPointCaptured: false,
+            _startPoint: null,
+            ctor: function(x, y, id) {
+                this.setTouchInfo(id, x, y);
+            },
+            getLocation: function() {
+                return {
+                    x: this._point.x,
+                    y: this._point.y
+                };
+            },
+            getLocationX: function() {
+                return this._point.x;
+            },
+            getLocationY: function() {
+                return this._point.y;
+            },
+            getPreviousLocation: function() {
+                return {
+                    x: this._prevPoint.x,
+                    y: this._prevPoint.y
+                };
+            },
+            getStartLocation: function() {
+                return {
+                    x: this._startPoint.x,
+                    y: this._startPoint.y
+                };
+            },
+            getDelta: function() {
+                return cc.pSub(this._point, this._prevPoint);
+            },
+            getLocationInView: function() {
+                return {
+                    x: this._point.x,
+                    y: cc.view._designResolutionSize.height - this._point.y
+                };
+            },
+            getPreviousLocationInView: function() {
+                return {
+                    x: this._prevPoint.x,
+                    y: cc.view._designResolutionSize.height - this._prevPoint.y
+                };
+            },
+            getStartLocationInView: function() {
+                return {
+                    x: this._startPoint.x,
+                    y: cc.view._designResolutionSize.height - this._startPoint.y
+                };
+            },
+            getID: function() {
+                return this._id;
+            },
+            setTouchInfo: function(id, x, y) {
+                this._prevPoint = this._point;
+                this._point = cc.p(x || 0, y || 0);
+                this._id = id;
+                if (!this._startPointCaptured) {
+                    this._startPoint = cc.p(this._point);
+                    cc.view._convertPointWithScale(this._startPoint);
+                    this._startPointCaptured = true;
+                }
+            },
+            _setPoint: function(x, y) {
+                if (void 0 === y) {
+                    this._point.x = x.x;
+                    this._point.y = x.y;
+                } else {
+                    this._point.x = x;
+                    this._point.y = y;
+                }
+            },
+            _setPrevPoint: function(x, y) {
+                void 0 === y ? this._prevPoint = cc.p(x.x, x.y) : this._prevPoint = cc.p(x || 0, y || 0);
+            }
+        });
+    }, {} ],
+    51: [ function(require, module, exports) {
+        require("./CCTouch");
+        require("./CCSystemEvent");
+        require("./CCEventListener");
+        require("./CCEventManager");
+    }, {
+        "./CCEventListener": 47,
+        "./CCEventManager": 48,
+        "./CCSystemEvent": 49,
+        "./CCTouch": 50
+    } ],
+    52: [ function(require, module, exports) {
         var JS = cc.js;
         var CallbacksHandler = require("../platform/callbacks-invoker").CallbacksHandler;
         var REMOVE_PLACEHOLDER = CallbacksHandler.REMOVE_PLACEHOLDER;
@@ -10964,9 +11429,9 @@ var _ccsg = global._ccsg;
         };
         module.exports = EventListeners;
     }, {
-        "../platform/callbacks-invoker": 76
+        "../platform/callbacks-invoker": 81
     } ],
-    49: [ function(require, module, exports) {
+    53: [ function(require, module, exports) {
         var EventListeners = require("./event-listeners");
         require("./event");
         var JS = cc.js;
@@ -11110,10 +11575,10 @@ var _ccsg = global._ccsg;
         EventTarget.prototype._EventTargetTargetOff = EventTarget.prototype.targetOff;
         cc.EventTarget = module.exports = EventTarget;
     }, {
-        "./event": 50,
-        "./event-listeners": 48
+        "./event": 54,
+        "./event-listeners": 52
     } ],
-    50: [ function(require, module, exports) {
+    54: [ function(require, module, exports) {
         var JS = require("../platform/js");
         cc.Event = function(type, bubbles) {
             this.type = type;
@@ -11176,18 +11641,18 @@ var _ccsg = global._ccsg;
         cc.Event.EventCustom = EventCustom;
         module.exports = cc.Event;
     }, {
-        "../platform/js": 81
+        "../platform/js": 86
     } ],
-    51: [ function(require, module, exports) {
+    55: [ function(require, module, exports) {
         require("./event.js");
         require("./event-listeners.js");
         require("./event-target.js");
     }, {
-        "./event-listeners.js": 48,
-        "./event-target.js": 49,
-        "./event.js": 50
+        "./event-listeners.js": 52,
+        "./event-target.js": 53,
+        "./event.js": 54
     } ],
-    52: [ function(require, module, exports) {
+    56: [ function(require, module, exports) {
         require("./platform");
         require("./assets");
         require("./CCNode");
@@ -11197,12 +11662,12 @@ var _ccsg = global._ccsg;
     }, {
         "./CCNode": 21,
         "./CCScene": 22,
-        "./assets": 31,
-        "./base-ui/CCWidgetManager": 32,
-        "./components": 46,
-        "./platform": 79
+        "./assets": 30,
+        "./base-ui/CCWidgetManager": 31,
+        "./components": 45,
+        "./platform": 84
     } ],
-    53: [ function(require, module, exports) {
+    57: [ function(require, module, exports) {
         var JS = require("../platform/js");
         var Pipeline = require("./pipeline");
         var Downloader = require("./downloader");
@@ -11447,15 +11912,15 @@ var _ccsg = global._ccsg;
         cc.loader = new CCLoader();
         module.exports = cc.loader;
     }, {
-        "../platform/js": 81,
-        "../platform/utils": 85,
-        "./asset-table": 54,
-        "./auto-release-utils": 56,
-        "./downloader": 57,
-        "./loader": 60,
-        "./pipeline": 63
+        "../platform/js": 86,
+        "../platform/utils": 90,
+        "./asset-table": 58,
+        "./auto-release-utils": 60,
+        "./downloader": 61,
+        "./loader": 64,
+        "./pipeline": 67
     } ],
-    54: [ function(require, module, exports) {
+    58: [ function(require, module, exports) {
         function Entry(uuid, type) {
             this.uuid = uuid;
             this.type = type;
@@ -11546,7 +12011,7 @@ var _ccsg = global._ccsg;
         });
         module.exports = AssetTable;
     }, {} ],
-    55: [ function(require, module, exports) {
+    59: [ function(require, module, exports) {
         var Path = require("../utils/CCPath");
         var Sys = require("../platform/CCSys");
         var Pipeline = require("./pipeline");
@@ -11626,11 +12091,11 @@ var _ccsg = global._ccsg;
         }
         module.exports = downloadAudio;
     }, {
-        "../platform/CCSys": 71,
-        "../utils/CCPath": 93,
-        "./pipeline": 63
+        "../platform/CCSys": 76,
+        "../utils/CCPath": 98,
+        "./pipeline": 67
     } ],
-    56: [ function(require, module, exports) {
+    60: [ function(require, module, exports) {
         function parseDepends(key, parsed) {
             var item = cc.loader.getItem(key);
             if (item) {
@@ -11698,7 +12163,7 @@ var _ccsg = global._ccsg;
             }
         };
     }, {} ],
-    57: [ function(require, module, exports) {
+    61: [ function(require, module, exports) {
         var JS = require("../platform/js");
         var Path = require("../utils/CCPath");
         var Pipeline = require("./pipeline");
@@ -11842,15 +12307,15 @@ var _ccsg = global._ccsg;
         });
         Pipeline.Downloader = module.exports = Downloader;
     }, {
-        "../platform/js": 81,
-        "../utils/CCPath": 93,
-        "./audio-downloader": 55,
-        "./pack-downloader": 62,
-        "./pipeline": 63,
-        "./text-downloader": 64,
-        "./utils": 65
+        "../platform/js": 86,
+        "../utils/CCPath": 98,
+        "./audio-downloader": 59,
+        "./pack-downloader": 66,
+        "./pipeline": 67,
+        "./text-downloader": 68,
+        "./utils": 69
     } ],
-    58: [ function(require, module, exports) {
+    62: [ function(require, module, exports) {
         require("./downloader");
         require("./loader");
         require("./json-unpacker");
@@ -11858,14 +12323,14 @@ var _ccsg = global._ccsg;
         require("./pipeline");
         require("./CCLoader");
     }, {
-        "./CCLoader": 53,
-        "./downloader": 57,
-        "./json-unpacker": 59,
-        "./loader": 60,
-        "./loading-items": 61,
-        "./pipeline": 63
+        "./CCLoader": 57,
+        "./downloader": 61,
+        "./json-unpacker": 63,
+        "./loader": 64,
+        "./loading-items": 65,
+        "./pipeline": 67
     } ],
-    59: [ function(require, module, exports) {
+    63: [ function(require, module, exports) {
         function JsonUnpacker() {
             this.jsons = {};
         }
@@ -11883,7 +12348,7 @@ var _ccsg = global._ccsg;
         };
         module.exports = JsonUnpacker;
     }, {} ],
-    60: [ function(require, module, exports) {
+    64: [ function(require, module, exports) {
         var JS = require("../platform/js");
         var Pipeline = require("./pipeline");
         var loadUuid = require("./uuid-loader");
@@ -12027,11 +12492,11 @@ var _ccsg = global._ccsg;
         });
         Pipeline.Loader = module.exports = Loader;
     }, {
-        "../platform/js": 81,
-        "./pipeline": 63,
-        "./uuid-loader": 66
+        "../platform/js": 86,
+        "./pipeline": 67,
+        "./uuid-loader": 70
     } ],
-    61: [ function(require, module, exports) {
+    65: [ function(require, module, exports) {
         var CallbacksInvoker = require("../platform/callbacks-invoker");
         var JS = require("../platform/js");
         var LoadingItems = function() {
@@ -12108,10 +12573,10 @@ var _ccsg = global._ccsg;
         });
         module.exports = LoadingItems;
     }, {
-        "../platform/callbacks-invoker": 76,
-        "../platform/js": 81
+        "../platform/callbacks-invoker": 81,
+        "../platform/js": 86
     } ],
-    62: [ function(require, module, exports) {
+    66: [ function(require, module, exports) {
         var JsonUnpacker = require("./json-unpacker");
         var uuidToPack = {};
         var packIndices = {};
@@ -12165,9 +12630,9 @@ var _ccsg = global._ccsg;
             }
         };
     }, {
-        "./json-unpacker": 59
+        "./json-unpacker": 63
     } ],
-    63: [ function(require, module, exports) {
+    67: [ function(require, module, exports) {
         var JS = require("../platform/js");
         var Path = require("../utils/CCPath");
         var LoadingItems = require("./loading-items");
@@ -12436,11 +12901,11 @@ var _ccsg = global._ccsg;
         });
         cc.Pipeline = module.exports = Pipeline;
     }, {
-        "../platform/js": 81,
-        "../utils/CCPath": 93,
-        "./loading-items": 61
+        "../platform/js": 86,
+        "../utils/CCPath": 98,
+        "./loading-items": 65
     } ],
-    64: [ function(require, module, exports) {
+    68: [ function(require, module, exports) {
         var Pipeline = require("./pipeline");
         var urlAppendTimestamp = require("./utils").urlAppendTimestamp;
         module.exports = function(item, callback) {
@@ -12462,10 +12927,10 @@ var _ccsg = global._ccsg;
             xhr.send(null);
         };
     }, {
-        "./pipeline": 63,
-        "./utils": 65
+        "./pipeline": 67,
+        "./utils": 69
     } ],
-    65: [ function(require, module, exports) {
+    69: [ function(require, module, exports) {
         var _noCacheRex = /\?/;
         module.exports = {
             urlAppendTimestamp: function(url) {
@@ -12474,7 +12939,7 @@ var _ccsg = global._ccsg;
             }
         };
     }, {} ],
-    66: [ function(require, module, exports) {
+    70: [ function(require, module, exports) {
         var JS = require("../platform/js");
         require("../platform/deserialize");
         var _tdInfo = new cc.deserialize.Details();
@@ -12622,10 +13087,10 @@ var _ccsg = global._ccsg;
         module.exports = loadUuid;
         loadUuid.isSceneObj = isSceneObj;
     }, {
-        "../platform/deserialize": 77,
-        "../platform/js": 81
+        "../platform/deserialize": 82,
+        "../platform/js": 86
     } ],
-    67: [ function(require, module, exports) {
+    71: [ function(require, module, exports) {
         var Asset = require("../assets/CCAsset");
         var callInNextTick = require("./utils").callInNextTick;
         var Loader = require("../load-pipeline/CCLoader");
@@ -12761,12 +13226,12 @@ var _ccsg = global._ccsg;
         cc.AssetLibrary = AssetLibrary;
     }, {
         "../assets/CCAsset": 24,
-        "../load-pipeline/CCLoader": 53,
-        "../load-pipeline/auto-release-utils": 56,
-        "../load-pipeline/pack-downloader": 62,
-        "./utils": 85
+        "../load-pipeline/CCLoader": 57,
+        "../load-pipeline/auto-release-utils": 60,
+        "../load-pipeline/pack-downloader": 66,
+        "./utils": 90
     } ],
-    68: [ function(require, module, exports) {
+    72: [ function(require, module, exports) {
         var JS = require("./js");
         var Enum = require("../value-types/CCEnum");
         var Utils = require("./utils");
@@ -13309,13 +13774,247 @@ var _ccsg = global._ccsg;
             fastDefine: CCClass._fastDefine
         };
     }, {
-        "../value-types/CCEnum": 103,
-        "./attribute": 75,
-        "./js": 81,
-        "./preprocess-attrs": 82,
-        "./utils": 85
+        "../value-types/CCEnum": 108,
+        "./attribute": 80,
+        "./js": 86,
+        "./preprocess-attrs": 87,
+        "./utils": 90
     } ],
-    69: [ function(require, module, exports) {
+    73: [ function(require, module, exports) {
+        var canvasBox;
+        var inputManager = {
+            _mousePressed: false,
+            _preTouchPoint: cc.p(0, 0),
+            _prevMousePoint: cc.p(0, 0),
+            _preTouchPool: [],
+            _preTouchPoolPointer: 0,
+            _touches: [],
+            _touchesIntegerDict: {},
+            _indexBitsUsed: 0,
+            _maxTouches: 5,
+            _accelEnabled: false,
+            _accelInterval: 1 / 30,
+            _accelMinus: 1,
+            _accelCurTime: 0,
+            _acceleration: null,
+            _accelDeviceEvent: null,
+            _getUnUsedIndex: function() {
+                var temp = this._indexBitsUsed;
+                for (var i = 0; i < this._maxTouches; i++) {
+                    if (!(1 & temp)) {
+                        this._indexBitsUsed |= 1 << i;
+                        return i;
+                    }
+                    temp >>= 1;
+                }
+                return -1;
+            },
+            _removeUsedIndexBit: function(index) {
+                if (index < 0 || index >= this._maxTouches) {
+                    return;
+                }
+                var temp = 1 << index;
+                temp = ~temp;
+                this._indexBitsUsed &= temp;
+            },
+            _glView: null,
+            handleTouchesBegin: function(touches) {
+                var selTouch, index, curTouch, touchID, handleTouches = [], locTouchIntDict = this._touchesIntegerDict;
+                for (var i = 0, len = touches.length; i < len; i++) {
+                    selTouch = touches[i];
+                    touchID = selTouch.getID();
+                    index = locTouchIntDict[touchID];
+                    if (null == index) {
+                        var unusedIndex = this._getUnUsedIndex();
+                        if (unusedIndex === -1) {
+                            cc.log(cc._LogInfos.inputManager.handleTouchesBegin, unusedIndex);
+                            continue;
+                        }
+                        curTouch = this._touches[unusedIndex] = new cc.Touch(selTouch._point.x, selTouch._point.y, selTouch.getID());
+                        curTouch._setPrevPoint(selTouch._prevPoint);
+                        locTouchIntDict[touchID] = unusedIndex;
+                        handleTouches.push(curTouch);
+                    }
+                }
+                if (handleTouches.length > 0) {
+                    cc.view._convertTouchesWithScale(handleTouches);
+                    var touchEvent = new cc.Event.EventTouch(handleTouches);
+                    touchEvent._eventCode = cc.Event.EventTouch.BEGAN;
+                    cc.eventManager.dispatchEvent(touchEvent);
+                }
+            },
+            handleTouchesMove: function(touches) {
+                var selTouch, index, touchID, handleTouches = [], locTouches = this._touches;
+                for (var i = 0, len = touches.length; i < len; i++) {
+                    selTouch = touches[i];
+                    touchID = selTouch.getID();
+                    index = this._touchesIntegerDict[touchID];
+                    if (null == index) {
+                        continue;
+                    }
+                    if (locTouches[index]) {
+                        locTouches[index]._setPoint(selTouch._point);
+                        locTouches[index]._setPrevPoint(selTouch._prevPoint);
+                        handleTouches.push(locTouches[index]);
+                    }
+                }
+                if (handleTouches.length > 0) {
+                    cc.view._convertTouchesWithScale(handleTouches);
+                    var touchEvent = new cc.Event.EventTouch(handleTouches);
+                    touchEvent._eventCode = cc.Event.EventTouch.MOVED;
+                    cc.eventManager.dispatchEvent(touchEvent);
+                }
+            },
+            handleTouchesEnd: function(touches) {
+                var handleTouches = this.getSetOfTouchesEndOrCancel(touches);
+                if (handleTouches.length > 0) {
+                    cc.view._convertTouchesWithScale(handleTouches);
+                    var touchEvent = new cc.Event.EventTouch(handleTouches);
+                    touchEvent._eventCode = cc.Event.EventTouch.ENDED;
+                    cc.eventManager.dispatchEvent(touchEvent);
+                }
+            },
+            handleTouchesCancel: function(touches) {
+                var handleTouches = this.getSetOfTouchesEndOrCancel(touches);
+                if (handleTouches.length > 0) {
+                    cc.view._convertTouchesWithScale(handleTouches);
+                    var touchEvent = new cc.Event.EventTouch(handleTouches);
+                    touchEvent._eventCode = cc.Event.EventTouch.CANCELLED;
+                    cc.eventManager.dispatchEvent(touchEvent);
+                }
+            },
+            getSetOfTouchesEndOrCancel: function(touches) {
+                var selTouch, index, touchID, handleTouches = [], locTouches = this._touches, locTouchesIntDict = this._touchesIntegerDict;
+                for (var i = 0, len = touches.length; i < len; i++) {
+                    selTouch = touches[i];
+                    touchID = selTouch.getID();
+                    index = locTouchesIntDict[touchID];
+                    if (null == index) {
+                        continue;
+                    }
+                    if (locTouches[index]) {
+                        locTouches[index]._setPoint(selTouch._point);
+                        locTouches[index]._setPrevPoint(selTouch._prevPoint);
+                        handleTouches.push(locTouches[index]);
+                        this._removeUsedIndexBit(index);
+                        delete locTouchesIntDict[touchID];
+                    }
+                }
+                return handleTouches;
+            },
+            getPreTouch: function(touch) {
+                var preTouch = null;
+                var locPreTouchPool = this._preTouchPool;
+                var id = touch.getID();
+                for (var i = locPreTouchPool.length - 1; i >= 0; i--) {
+                    if (locPreTouchPool[i].getID() === id) {
+                        preTouch = locPreTouchPool[i];
+                        break;
+                    }
+                }
+                preTouch || (preTouch = touch);
+                return preTouch;
+            },
+            setPreTouch: function(touch) {
+                var find = false;
+                var locPreTouchPool = this._preTouchPool;
+                var id = touch.getID();
+                for (var i = locPreTouchPool.length - 1; i >= 0; i--) {
+                    if (locPreTouchPool[i].getID() === id) {
+                        locPreTouchPool[i] = touch;
+                        find = true;
+                        break;
+                    }
+                }
+                if (!find) {
+                    if (locPreTouchPool.length <= 50) {
+                        locPreTouchPool.push(touch);
+                    } else {
+                        locPreTouchPool[this._preTouchPoolPointer] = touch;
+                        this._preTouchPoolPointer = (this._preTouchPoolPointer + 1) % 50;
+                    }
+                }
+            },
+            getTouchByXY: function(tx, ty, pos) {
+                var locPreTouch = this._preTouchPoint;
+                var location = cc.view.convertToLocationInView(tx, ty, pos);
+                var touch = new cc.Touch(location.x, location.y);
+                touch._setPrevPoint(locPreTouch.x, locPreTouch.y);
+                locPreTouch.x = location.x;
+                locPreTouch.y = location.y;
+                return touch;
+            },
+            getPointByEvent: function(event, pos) {
+                if (null != event.pageX) {
+                    return {
+                        x: event.pageX,
+                        y: event.pageY
+                    };
+                }
+                pos.left -= document.body.scrollLeft;
+                pos.top -= document.body.scrollTop;
+                return {
+                    x: event.clientX,
+                    y: event.clientY
+                };
+            },
+            getTouchesByEvent: function(event, pos) {
+                var touchArr = [], locView = cc.view;
+                var touch_event, touch;
+                var locPreTouch = this._preTouchPoint;
+                var length = event.touches.length;
+                for (var i = 0; i < length; i++) {
+                    touch_event = event.touches[i];
+                    if (touch_event) {
+                        var location = locView.convertToLocationInView(touch_event.clientX, touch_event.clientY, pos);
+                        touch = new cc.Touch(location.x, location.y);
+                        touch._setPrevPoint(locPreTouch.x, locPreTouch.y);
+                        locPreTouch.x = location.x;
+                        locPreTouch.y = location.y;
+                        touchArr.push(touch);
+                    }
+                }
+                return touchArr;
+            },
+            handleTouchEvent: function(event) {
+                canvasBox || (canvasBox = {
+                    left: 0,
+                    top: 0,
+                    width: cc.sys.windowPixelResolution.width,
+                    height: cc.sys.windowPixelResolution.height
+                });
+                var touches = this.getTouchesByEvent(event, canvasBox);
+                switch (event.type) {
+                  case "touchstart":
+                    this.handleTouchesBegin(touches);
+                    break;
+
+                  case "touchmove":
+                    this.handleTouchesMove(touches);
+                    break;
+
+                  case "touchend":
+                    this.handleTouchesEnd(touches);
+                    break;
+
+                  case "touchcancel":
+                    this.handleTouchesCancel(touches);
+                }
+            },
+            _registerKeyboardEvent: function() {},
+            _registerAccelerometerEvent: function() {},
+            update: function(dt) {
+                if (this._accelCurTime > this._accelInterval) {
+                    this._accelCurTime -= this._accelInterval;
+                    cc.eventManager.dispatchEvent(new cc.Event.EventAcceleration(this._acceleration));
+                }
+                this._accelCurTime += dt;
+            }
+        };
+        cc.inputManager = inputManager;
+        module.exports = inputManager;
+    }, {} ],
+    74: [ function(require, module, exports) {
         require("./_CCClass");
         cc._tmp = cc._tmp || {};
         cc.KEY = {
@@ -13591,9 +14290,9 @@ var _ccsg = global._ccsg;
             }
         };
     }, {
-        "./_CCClass": 74
+        "./_CCClass": 79
     } ],
-    70: [ function(require, module, exports) {
+    75: [ function(require, module, exports) {
         var JS = require("./js");
         var Destroyed = 1;
         var RealDestroyed = 2;
@@ -13711,10 +14410,10 @@ var _ccsg = global._ccsg;
         cc.Object = CCObject;
         module.exports = CCObject;
     }, {
-        "./CCClass": 68,
-        "./js": 81
+        "./CCClass": 72,
+        "./js": 86
     } ],
-    71: [ function(require, module, exports) {
+    76: [ function(require, module, exports) {
         if (cc.sys) {
             return;
         }
@@ -14068,7 +14767,7 @@ var _ccsg = global._ccsg;
         };
         module.exports = sys;
     }, {} ],
-    72: [ function(require, module, exports) {
+    77: [ function(require, module, exports) {
         var __BrowserGetter = {
             init: function() {},
             availWidth: function(frame) {
@@ -14513,7 +15212,7 @@ var _ccsg = global._ccsg;
         cc.ResolutionPolicy.UNKNOWN = 5;
         module.exports = View;
     }, {} ],
-    73: [ function(require, module, exports) {
+    78: [ function(require, module, exports) {
         cc.visibleRect = {
             topLeft: cc.p(0, 0),
             topRight: cc.p(0, 0),
@@ -14551,7 +15250,7 @@ var _ccsg = global._ccsg;
             }
         };
     }, {} ],
-    74: [ function(require, module, exports) {
+    79: [ function(require, module, exports) {
         var ClassManager = cc.ClassManager = {
             id: 0 | 998 * Math.random(),
             instanceId: 0 | 998 * Math.random(),
@@ -14645,7 +15344,7 @@ var _ccsg = global._ccsg;
         };
         cc._Class = module.exports = Class;
     }, {} ],
-    75: [ function(require, module, exports) {
+    80: [ function(require, module, exports) {
         var JS = require("./js");
         var isPlainEmptyObj = require("./utils").isPlainEmptyObj_DEV;
         function createAttrsSingle(owner, ownerCtor, superAttrs) {
@@ -14859,10 +15558,10 @@ var _ccsg = global._ccsg;
             ScriptUuid: {}
         };
     }, {
-        "./js": 81,
-        "./utils": 85
+        "./js": 86,
+        "./utils": 90
     } ],
-    76: [ function(require, module, exports) {
+    81: [ function(require, module, exports) {
         var JS = require("./js");
         var CallbacksHandler = function() {
             this._callbackTable = {};
@@ -15040,9 +15739,9 @@ var _ccsg = global._ccsg;
         CallbacksInvoker.CallbacksHandler = CallbacksHandler;
         module.exports = CallbacksInvoker;
     }, {
-        "./js": 81
+        "./js": 86
     } ],
-    77: [ function(require, module, exports) {
+    82: [ function(require, module, exports) {
         var JS = require("./js");
         var Attr = require("./attribute");
         var Details = function() {
@@ -15267,10 +15966,10 @@ var _ccsg = global._ccsg;
             cc.warn('Can not find class "%s"', id);
         };
     }, {
-        "./attribute": 75,
-        "./js": 81
+        "./attribute": 80,
+        "./js": 86
     } ],
-    78: [ function(require, module, exports) {
+    83: [ function(require, module, exports) {
         var NonUuidMark = ".";
         function IdGenerater(category) {
             this.id = 0 | 998 * Math.random();
@@ -15282,7 +15981,7 @@ var _ccsg = global._ccsg;
         IdGenerater.global = new IdGenerater("global");
         module.exports = IdGenerater;
     }, {} ],
-    79: [ function(require, module, exports) {
+    84: [ function(require, module, exports) {
         require("./js");
         require("./CCClass");
         require("./CCObject");
@@ -15296,20 +15995,20 @@ var _ccsg = global._ccsg;
         cc.sys.isBrowser && require("./CCAssetLibrary");
         require("./CCVisibleRect");
     }, {
-        "./CCAssetLibrary": 67,
-        "./CCClass": 68,
-        "./CCMacro": 69,
-        "./CCObject": 70,
-        "./CCSys": 71,
-        "./CCVisibleRect": 73,
-        "./callbacks-invoker": 76,
-        "./deserialize": 77,
-        "./instantiate": 80,
-        "./js": 81,
-        "./requiring-frame": 83,
-        "./url": 84
+        "./CCAssetLibrary": 71,
+        "./CCClass": 72,
+        "./CCMacro": 74,
+        "./CCObject": 75,
+        "./CCSys": 76,
+        "./CCVisibleRect": 78,
+        "./callbacks-invoker": 81,
+        "./deserialize": 82,
+        "./instantiate": 85,
+        "./js": 86,
+        "./requiring-frame": 88,
+        "./url": 89
     } ],
-    80: [ function(require, module, exports) {
+    85: [ function(require, module, exports) {
         var CCObject = require("./CCObject");
         var PersistentMask = CCObject.Flags.PersistentMask;
         var Attr = require("./attribute");
@@ -15461,11 +16160,11 @@ var _ccsg = global._ccsg;
         cc.instantiate = instantiate;
         module.exports = instantiate;
     }, {
-        "./CCObject": 70,
-        "./attribute": 75,
-        "./utils": 85
+        "./CCObject": 75,
+        "./attribute": 80,
+        "./utils": 90
     } ],
-    81: [ function(require, module, exports) {
+    86: [ function(require, module, exports) {
         function _getPropertyDescriptor(obj, name) {
             var pd = Object.getOwnPropertyDescriptor(obj, name);
             if (pd) {
@@ -15785,7 +16484,7 @@ var _ccsg = global._ccsg;
         cc.js = js;
         module.exports = js;
     }, {} ],
-    82: [ function(require, module, exports) {
+    87: [ function(require, module, exports) {
         var SerializableAttrs = {
             url: {
                 canUsedInGet: true
@@ -15889,9 +16588,9 @@ var _ccsg = global._ccsg;
             }
         };
     }, {
-        "./CCClass": 68
+        "./CCClass": 72
     } ],
-    83: [ function(require, module, exports) {
+    88: [ function(require, module, exports) {
         var requiringFrames = [];
         cc._RFpush = function(module, uuid, script) {
             if (2 === arguments.length) {
@@ -15921,7 +16620,7 @@ var _ccsg = global._ccsg;
             return requiringFrames[requiringFrames.length - 1];
         };
     }, {} ],
-    84: [ function(require, module, exports) {
+    89: [ function(require, module, exports) {
         var _mounts = {};
         cc.url = {
             _rawAssets: "",
@@ -15948,7 +16647,7 @@ var _ccsg = global._ccsg;
         };
         module.exports = cc.url;
     }, {} ],
-    85: [ function(require, module, exports) {
+    90: [ function(require, module, exports) {
         module.exports = {
             isDomNode: "object" == typeof window && ("function" == typeof Node ? function(obj) {
                 return obj instanceof Node;
@@ -15976,7 +16675,7 @@ var _ccsg = global._ccsg;
             }
         });
     }, {} ],
-    86: [ function(require, module, exports) {
+    91: [ function(require, module, exports) {
         var Region = function() {
             this._minX = 0;
             this._minY = 0;
@@ -16222,7 +16921,7 @@ var _ccsg = global._ccsg;
         cc.Region = Region;
         cc.DirtyRegion = DirtyRegion;
     }, {} ],
-    87: [ function(require, module, exports) {
+    92: [ function(require, module, exports) {
         cc.rendererCanvas = {
             childrenOrderDirty: true,
             assignedZ: 0,
@@ -16523,14 +17222,14 @@ var _ccsg = global._ccsg;
             };
         })();
     }, {} ],
-    88: [ function(require, module, exports) {
+    93: [ function(require, module, exports) {
         require("./RendererCanvas");
         require("./DirtyRegion");
     }, {
-        "./DirtyRegion": 86,
-        "./RendererCanvas": 87
+        "./DirtyRegion": 91,
+        "./RendererCanvas": 92
     } ],
-    89: [ function(require, module, exports) {
+    94: [ function(require, module, exports) {
         var EventTarget = require("../event/event-target");
         cc.SpriteFrame = cc.Class({
             name: "cc.SpriteFrame",
@@ -16665,9 +17364,9 @@ var _ccsg = global._ccsg;
         proto.initWithTexture = proto.setTexture;
     }, {
         "../assets/CCAsset": 24,
-        "../event/event-target": 49
+        "../event/event-target": 53
     } ],
-    90: [ function(require, module, exports) {
+    95: [ function(require, module, exports) {
         var EventTarget = require("../event/event-target");
         var sys = require("../platform/CCSys");
         var JS = require("../platform/js");
@@ -17251,14 +17950,14 @@ var _ccsg = global._ccsg;
     }, {
         "../CCGame": 20,
         "../assets/CCRawAsset": 27,
-        "../event/event-target": 49,
-        "../platform/CCClass": 68,
-        "../platform/CCSys": 71,
-        "../platform/_CCClass": 74,
-        "../platform/js": 81,
-        "../utils/misc": 97
+        "../event/event-target": 53,
+        "../platform/CCClass": 72,
+        "../platform/CCSys": 76,
+        "../platform/_CCClass": 79,
+        "../platform/js": 86,
+        "../utils/misc": 102
     } ],
-    91: [ function(require, module, exports) {
+    96: [ function(require, module, exports) {
         var JS = require("../platform/js");
         var game = require("../CCGame");
         var Texture2D = require("./CCTexture2D");
@@ -17480,17 +18179,17 @@ var _ccsg = global._ccsg;
         cc.textureCache = module.exports = textureCache;
     }, {
         "../CCGame": 20,
-        "../platform/js": 81,
-        "./CCTexture2D": 90
+        "../platform/js": 86,
+        "./CCTexture2D": 95
     } ],
-    92: [ function(require, module, exports) {
+    97: [ function(require, module, exports) {
         require("./CCTexture2D");
         require("./CCTextureCache");
     }, {
-        "./CCTexture2D": 90,
-        "./CCTextureCache": 91
+        "./CCTexture2D": 95,
+        "./CCTextureCache": 96
     } ],
-    93: [ function(require, module, exports) {
+    98: [ function(require, module, exports) {
         require("../platform/CCSys");
         var EXTNAME_RE = /(\.[^\.\/\?\\]*)(\?.*)?$/;
         var NORMALIZE_RE = /[^\.\/]+\/\.\.\//;
@@ -17589,9 +18288,9 @@ var _ccsg = global._ccsg;
         };
         module.exports = cc.path;
     }, {
-        "../platform/CCSys": 71
+        "../platform/CCSys": 76
     } ],
-    94: [ function(require, module, exports) {
+    99: [ function(require, module, exports) {
         var SgHelper = require("./scene-graph-helper");
         var Destroying = require("../platform/CCObject").Flags.Destroying;
         var Misc = require("./misc");
@@ -18429,12 +19128,12 @@ var _ccsg = global._ccsg;
         Misc.propertyDefine(BaseNode, SameNameGetSets, DiffNameGetSets);
         cc._BaseNode = module.exports = BaseNode;
     }, {
-        "../platform/CCObject": 70,
-        "../platform/id-generater": 78,
-        "./misc": 97,
-        "./scene-graph-helper": 100
+        "../platform/CCObject": 75,
+        "../platform/id-generater": 83,
+        "./misc": 102,
+        "./scene-graph-helper": 105
     } ],
-    95: [ function(require, module, exports) {
+    100: [ function(require, module, exports) {
         cc.find = module.exports = function(path, referenceNode) {
             if (null == path) {
                 cc.error("Argument must be non-nil");
@@ -18478,16 +19177,16 @@ var _ccsg = global._ccsg;
             return match;
         };
     }, {} ],
-    96: [ function(require, module, exports) {
+    101: [ function(require, module, exports) {
         require("./CCPath");
         require("./find");
         require("./mutable-forward-iterator");
     }, {
-        "./CCPath": 93,
-        "./find": 95,
-        "./mutable-forward-iterator": 98
+        "./CCPath": 98,
+        "./find": 100,
+        "./mutable-forward-iterator": 103
     } ],
-    97: [ function(require, module, exports) {
+    102: [ function(require, module, exports) {
         var misc = {};
         misc.propertyDefine = function(ctor, sameNameGetSets, diffNameGetSets) {
             function define(np, propName, getter, setter) {
@@ -18542,7 +19241,7 @@ var _ccsg = global._ccsg;
         };
         module.exports = misc;
     }, {} ],
-    98: [ function(require, module, exports) {
+    103: [ function(require, module, exports) {
         var js = require("../platform/js");
         function MutableForwardIterator(array) {
             this.i = 0;
@@ -18558,9 +19257,9 @@ var _ccsg = global._ccsg;
         };
         js.array.MutableForwardIterator = module.exports = MutableForwardIterator;
     }, {
-        "../platform/js": 81
+        "../platform/js": 86
     } ],
-    99: [ function(require, module, exports) {
+    104: [ function(require, module, exports) {
         cc._PrefabInfo = cc.Class({
             name: "cc.PrefabInfo",
             properties: {
@@ -18613,7 +19312,7 @@ var _ccsg = global._ccsg;
             }
         };
     }, {} ],
-    100: [ function(require, module, exports) {
+    105: [ function(require, module, exports) {
         var SceneGraphUtils = {
             removeSgNode: function() {
                 var node = this._sgNode;
@@ -18663,7 +19362,7 @@ var _ccsg = global._ccsg;
         cc._Test.SceneGraphUtils = SceneGraphUtils;
         module.exports = SceneGraphUtils;
     }, {} ],
-    101: [ function(require, module, exports) {
+    106: [ function(require, module, exports) {
         cc.AffineTransform = function(a, b, c, d, tx, ty) {
             this.a = a;
             this.b = b;
@@ -18865,7 +19564,7 @@ var _ccsg = global._ccsg;
             };
         };
     }, {} ],
-    102: [ function(require, module, exports) {
+    107: [ function(require, module, exports) {
         var ValueType = require("./CCValueType");
         var JS = require("../platform/js");
         var Color = function() {
@@ -19111,11 +19810,11 @@ var _ccsg = global._ccsg;
         };
         module.exports = cc.Color;
     }, {
-        "../platform/CCClass": 68,
-        "../platform/js": 81,
-        "./CCValueType": 108
+        "../platform/CCClass": 72,
+        "../platform/js": 86,
+        "./CCValueType": 113
     } ],
-    103: [ function(require, module, exports) {
+    108: [ function(require, module, exports) {
         cc.Enum = function(obj) {
             var enumType = {};
             Object.defineProperty(enumType, "__enums__", {
@@ -19173,7 +19872,7 @@ var _ccsg = global._ccsg;
         0 === _TestEnum.ZERO && 1 === _TestEnum.ONE && 2 === _TestEnum.TWO && 3 === _TestEnum.THREE || cc.error('Sorry, "cc.Enum" not available on this platform, please report this error here: https://github.com/fireball-x/fireball/issues/new');
         module.exports = cc.Enum;
     }, {} ],
-    104: [ function(require, module, exports) {
+    109: [ function(require, module, exports) {
         var POINT_EPSILON = parseFloat("1.192092896e-07F");
         cc.pNeg = function(point) {
             return cc.p(-point.x, -point.y);
@@ -19353,7 +20052,7 @@ var _ccsg = global._ccsg;
             cc.pMultIn(v, 1 / Math.sqrt(v.x * v.x + v.y * v.y));
         };
     }, {} ],
-    105: [ function(require, module, exports) {
+    110: [ function(require, module, exports) {
         var ValueType = require("./CCValueType");
         var JS = require("../platform/js");
         function Rect(x, y, w, h) {
@@ -19534,11 +20233,11 @@ var _ccsg = global._ccsg;
         };
         module.exports = cc.Rect;
     }, {
-        "../platform/CCClass": 68,
-        "../platform/js": 81,
-        "./CCValueType": 108
+        "../platform/CCClass": 72,
+        "../platform/js": 86,
+        "./CCValueType": 113
     } ],
-    106: [ function(require, module, exports) {
+    111: [ function(require, module, exports) {
         var ValueType = require("./CCValueType");
         var JS = require("../platform/js");
         function Size(width, height) {
@@ -19583,11 +20282,11 @@ var _ccsg = global._ccsg;
         };
         cc.Size = module.exports = Size;
     }, {
-        "../platform/CCClass": 68,
-        "../platform/js": 81,
-        "./CCValueType": 108
+        "../platform/CCClass": 72,
+        "../platform/js": 86,
+        "./CCValueType": 113
     } ],
-    107: [ function(require, module, exports) {
+    112: [ function(require, module, exports) {
         cc.Acceleration = function(x, y, z, timestamp) {
             this.x = x || 0;
             this.y = y || 0;
@@ -19738,7 +20437,7 @@ var _ccsg = global._ccsg;
             }
         });
     }, {} ],
-    108: [ function(require, module, exports) {
+    113: [ function(require, module, exports) {
         var JS = require("../platform/js");
         function ValueType() {}
         JS.setClassName("cc.ValueType", ValueType);
@@ -19753,9 +20452,9 @@ var _ccsg = global._ccsg;
         cc.ValueType = ValueType;
         module.exports = ValueType;
     }, {
-        "../platform/js": 81
+        "../platform/js": 86
     } ],
-    109: [ function(require, module, exports) {
+    114: [ function(require, module, exports) {
         var ValueType = require("./CCValueType");
         var JS = require("../platform/js");
         var CCClass = require("../platform/CCClass");
@@ -19946,11 +20645,11 @@ var _ccsg = global._ccsg;
         };
         module.exports = cc.Vec2;
     }, {
-        "../platform/CCClass": 68,
-        "../platform/js": 81,
-        "./CCValueType": 108
+        "../platform/CCClass": 72,
+        "../platform/js": 86,
+        "./CCValueType": 113
     } ],
-    110: [ function(require, module, exports) {
+    115: [ function(require, module, exports) {
         require("./CCValueType");
         require("./CCEnum");
         require("./CCVec2");
@@ -19961,17 +20660,17 @@ var _ccsg = global._ccsg;
         require("./CCTypes");
         require("./CCAffineTransform");
     }, {
-        "./CCAffineTransform": 101,
-        "./CCColor": 102,
-        "./CCEnum": 103,
-        "./CCPointExtension": 104,
-        "./CCRect": 105,
-        "./CCSize": 106,
-        "./CCTypes": 107,
-        "./CCValueType": 108,
-        "./CCVec2": 109
+        "./CCAffineTransform": 106,
+        "./CCColor": 107,
+        "./CCEnum": 108,
+        "./CCPointExtension": 109,
+        "./CCRect": 110,
+        "./CCSize": 111,
+        "./CCTypes": 112,
+        "./CCValueType": 113,
+        "./CCVec2": 114
     } ],
-    111: [ function(require, module, exports) {
+    116: [ function(require, module, exports) {
         cc.math.AABB = function(min, max) {
             this.min = min || new cc.math.Vec3();
             this.max = max || new cc.math.Vec3();
@@ -19992,7 +20691,7 @@ var _ccsg = global._ccsg;
             return pOut;
         };
     }, {} ],
-    112: [ function(require, module, exports) {
+    117: [ function(require, module, exports) {
         cc.math.Matrix4Stack = function(top, stack) {
             this.top = top;
             this.stack = stack || [];
@@ -20028,7 +20727,7 @@ var _ccsg = global._ccsg;
             this._matrixPool.push(matrix);
         };
     }, {} ],
-    113: [ function(require, module, exports) {
+    118: [ function(require, module, exports) {
         var math = cc.math;
         math.KM_GL_MODELVIEW = 5888;
         math.KM_GL_PROJECTION = 5889;
@@ -20135,7 +20834,7 @@ var _ccsg = global._ccsg;
             }
         };
     }, {} ],
-    114: [ function(require, module, exports) {
+    119: [ function(require, module, exports) {
         require("./utility");
         require("./vec2");
         require("./vec3");
@@ -20149,20 +20848,20 @@ var _ccsg = global._ccsg;
         require("./gl/mat4stack");
         require("./gl/matrix");
     }, {
-        "./aabb": 111,
-        "./gl/mat4stack": 112,
-        "./gl/matrix": 113,
-        "./mat3": 115,
-        "./mat4": 116,
-        "./plane": 117,
-        "./quaternion": 118,
-        "./ray2": 119,
-        "./utility": 120,
-        "./vec2": 121,
-        "./vec3": 122,
-        "./vec4": 123
+        "./aabb": 116,
+        "./gl/mat4stack": 117,
+        "./gl/matrix": 118,
+        "./mat3": 120,
+        "./mat4": 121,
+        "./plane": 122,
+        "./quaternion": 123,
+        "./ray2": 124,
+        "./utility": 125,
+        "./vec2": 126,
+        "./vec3": 127,
+        "./vec4": 128
     } ],
-    115: [ function(require, module, exports) {
+    120: [ function(require, module, exports) {
         var Uint16Array = Uint16Array || Array;
         var Float32Array = Float32Array || Array;
         cc.math.Matrix3 = function(mat3) {
@@ -20391,7 +21090,7 @@ var _ccsg = global._ccsg;
             return cc.math.Quaternion.rotationMatrix(this).toAxisAndAngle();
         };
     }, {} ],
-    116: [ function(require, module, exports) {
+    121: [ function(require, module, exports) {
         cc.math.Matrix4 = function(mat4) {
             mat4 && mat4.mat ? this.mat = new Float32Array(mat4.mat) : this.mat = new Float32Array(16);
         };
@@ -21041,7 +21740,7 @@ var _ccsg = global._ccsg;
             return temp.toAxisAndAngle();
         };
     }, {} ],
-    117: [ function(require, module, exports) {
+    122: [ function(require, module, exports) {
         cc.math.Plane = function(a, b, c, d) {
             if (a && void 0 === b) {
                 this.a = a.a;
@@ -21109,7 +21808,7 @@ var _ccsg = global._ccsg;
             return cc.math.Plane.POINT_ON_PLANE;
         };
     }, {} ],
-    118: [ function(require, module, exports) {
+    123: [ function(require, module, exports) {
         cc.math.Quaternion = function(x, y, z, w) {
             if (x && void 0 === y) {
                 this.x = x.x;
@@ -21361,7 +22060,7 @@ var _ccsg = global._ccsg;
             return retVec;
         };
     }, {} ],
-    119: [ function(require, module, exports) {
+    124: [ function(require, module, exports) {
         cc.math.Ray2 = function(start, dir) {
             this.start = start || new cc.math.Vec2();
             this.dir = dir || new cc.math.Vec2();
@@ -21447,7 +22146,7 @@ var _ccsg = global._ccsg;
             return intersected;
         };
     }, {} ],
-    120: [ function(require, module, exports) {
+    125: [ function(require, module, exports) {
         cc.math = cc.math || {};
         cc.math.EPSILON = 1 / 64;
         cc.math.square = function(s) {
@@ -21457,7 +22156,7 @@ var _ccsg = global._ccsg;
             return lhs + cc.math.EPSILON > rhs && lhs - cc.math.EPSILON < rhs;
         };
     }, {} ],
-    121: [ function(require, module, exports) {
+    126: [ function(require, module, exports) {
         cc.math.Vec2 = function(x, y) {
             if (void 0 === y) {
                 this.x = x.x;
@@ -21527,7 +22226,7 @@ var _ccsg = global._ccsg;
             return this.x < vec.x + cc.math.EPSILON && this.x > vec.x - cc.math.EPSILON && this.y < vec.y + cc.math.EPSILON && this.y > vec.y - cc.math.EPSILON;
         };
     }, {} ],
-    122: [ function(require, module, exports) {
+    127: [ function(require, module, exports) {
         cc.math.Vec3 = cc.math.Vec3 = function(x, y, z) {
             if (x && void 0 === y) {
                 this.x = x.x;
@@ -21658,7 +22357,7 @@ var _ccsg = global._ccsg;
             return tyArr;
         };
     }, {} ],
-    123: [ function(require, module, exports) {
+    128: [ function(require, module, exports) {
         cc.math.Vec4 = function(x, y, z, w) {
             if (x && void 0 === y) {
                 this.x = x.x;
@@ -21767,16 +22466,16 @@ var _ccsg = global._ccsg;
             return tyArr;
         };
     }, {} ],
-    124: [ function(require, module, exports) {
+    129: [ function(require, module, exports) {
         require("./cocos2d/core");
         require("./cocos2d/animation");
         require("./extensions/ccpool/CCNodePool.js");
     }, {
         "./cocos2d/animation": 13,
-        "./cocos2d/core": 52,
-        "./extensions/ccpool/CCNodePool.js": 125
+        "./cocos2d/core": 56,
+        "./extensions/ccpool/CCNodePool.js": 130
     } ],
-    125: [ function(require, module, exports) {
+    130: [ function(require, module, exports) {
         cc.NodePool = function(poolHandlerComp) {
             this.poolHandlerComp = poolHandlerComp;
             this._pool = [];
@@ -21815,7 +22514,7 @@ var _ccsg = global._ccsg;
         };
         module.exports = cc.NodePool;
     }, {} ],
-    126: [ function(require, module, exports) {
+    131: [ function(require, module, exports) {
         require("./predefine");
         var isMainProcess = false;
         if (isMainProcess) {
@@ -21829,13 +22528,13 @@ var _ccsg = global._ccsg;
         module.exports = cc;
     }, {
         "./bin/modular-cocos2d": 3,
-        "./bin/modular-cocos2d-cut": 127,
-        "./extends": 124,
+        "./bin/modular-cocos2d-cut": 132,
+        "./extends": 129,
         "./package.json": void 0,
-        "./predefine": 130
+        "./predefine": 135
     } ],
-    127: [ function(require, module, exports) {}, {} ],
-    128: [ function(require, module, exports) {
+    132: [ function(require, module, exports) {}, {} ],
+    133: [ function(require, module, exports) {
         Math.sign = Math.sign || function(x) {
             x = +x;
             if (0 === x || isNaN(x)) {
@@ -21844,7 +22543,7 @@ var _ccsg = global._ccsg;
             return x > 0 ? 1 : -1;
         };
     }, {} ],
-    129: [ function(require, module, exports) {
+    134: [ function(require, module, exports) {
         String.prototype.startsWith || (String.prototype.startsWith = function(searchString, position) {
             position = position || 0;
             return this.lastIndexOf(searchString, position) === position;
@@ -21856,7 +22555,7 @@ var _ccsg = global._ccsg;
             return lastIndex !== -1 && lastIndex === position;
         });
     }, {} ],
-    130: [ function(require, module, exports) {
+    135: [ function(require, module, exports) {
         var cc = global.cc || {};
         var _ccsg = global._ccsg || {};
         cc._Test = {};
@@ -21867,6 +22566,7 @@ var _ccsg = global._ccsg;
         require("./cocos2d/core/platform/js");
         require("./cocos2d/core/value-types");
         require("./cocos2d/core/utils");
+        require("./cocos2d/core/platform/CCInputManager");
         require("./cocos2d/core/event");
         require("./cocos2d/core/platform/CCSys");
         require("./cocos2d/core/platform/CCMacro");
@@ -21878,6 +22578,7 @@ var _ccsg = global._ccsg;
         require("./cocos2d/core/platform/CCView");
         require("./cocos2d/core/CCActionManager");
         require("./cocos2d/core/CCScheduler");
+        require("./cocos2d/core/event-manager");
         require("./cocos2d/core/renderer");
         require("./CCBoot.js");
         require("./cocos2d/core/CCGame");
@@ -21889,19 +22590,21 @@ var _ccsg = global._ccsg;
         "./cocos2d/core/CCDirectorCanvas": 19,
         "./cocos2d/core/CCGame": 20,
         "./cocos2d/core/CCScheduler": 23,
-        "./cocos2d/core/event": 51,
-        "./cocos2d/core/load-pipeline": 58,
-        "./cocos2d/core/platform/CCMacro": 69,
-        "./cocos2d/core/platform/CCSys": 71,
-        "./cocos2d/core/platform/CCView": 72,
-        "./cocos2d/core/platform/js": 81,
-        "./cocos2d/core/renderer": 88,
-        "./cocos2d/core/textures": 92,
-        "./cocos2d/core/utils": 96,
-        "./cocos2d/core/value-types": 110,
-        "./cocos2d/kazmath": 114,
-        "./polyfill/math": 128,
-        "./polyfill/string": 129
+        "./cocos2d/core/event": 55,
+        "./cocos2d/core/event-manager": 51,
+        "./cocos2d/core/load-pipeline": 62,
+        "./cocos2d/core/platform/CCInputManager": 73,
+        "./cocos2d/core/platform/CCMacro": 74,
+        "./cocos2d/core/platform/CCSys": 76,
+        "./cocos2d/core/platform/CCView": 77,
+        "./cocos2d/core/platform/js": 86,
+        "./cocos2d/core/renderer": 93,
+        "./cocos2d/core/textures": 97,
+        "./cocos2d/core/utils": 101,
+        "./cocos2d/core/value-types": 115,
+        "./cocos2d/kazmath": 119,
+        "./polyfill/math": 133,
+        "./polyfill/string": 134
     } ]
-}, {}, [ 126 ]);
+}, {}, [ 131 ]);
 //# sourceMappingURL=cocos2d-js.js.map
