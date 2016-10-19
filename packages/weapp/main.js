@@ -2,10 +2,10 @@
 
 var fs = require('fs');
 var path = require('path');
-var fse = require('fs-extra');
+var fse = require('fire-fs');
 
 var webMobileDir = path.join(Editor.projectInfo.path, 'build/web-mobile/');
-var templateDir = Editor.url('packages://weapp/');
+var templateDir = path.join(Editor.projectInfo.path, 'packages/weapp/template');
 
 // TODO: modify it to your own path
 // The wechat app project destination with page sub path for the cocos game
@@ -13,22 +13,6 @@ var exportDir = path.join(Editor.projectInfo.path, 'hellococos/pages/index/');
 
 var paths = exportDir.split(path.sep);
 var projectName = paths[paths.length-1];
-
-function copyFile(source, target) {
-    return new Promise(function(resolve, reject) {
-        var rd = fs.createReadStream(source);
-        rd.on('error', rejectCleanup);
-        var wr = fs.createWriteStream(target);
-        wr.on('error', rejectCleanup);
-        function rejectCleanup(err) {
-            rd.destroy();
-            wr.end();
-            reject(err);
-        }
-        wr.on('finish', resolve);
-        rd.pipe(wr);
-    });
-}
 
 function parseJSONs (dir) {
     var stat = fs.statSync(dir);
@@ -49,17 +33,17 @@ function parseJSONs (dir) {
             ext = path.extname(subpaths[i]);
             // JSON file parse to JS file
             if (ext.toLowerCase() === '.json') {
-                fs.readFile(subpath, (err, content) => {
+                fs.readFile(subpath, (function (err, content) {
                     if (err) {
                         Editor.error(err);
                     }
                     else {
                         content = 'module.exports = ' + content;
-                        fs.writeFileSync(subpath, content, 'utf8');
-                        Editor.log('JSON file parsed to JS: ' + subpath);
-                        fs.renameSync(subpath, subpath + '.js');
+                        fs.writeFileSync(this.path, content, 'utf8');
+                        Editor.log('JSON file parsed to JS: ' + this.path);
+                        fs.renameSync(this.path, this.path + '.js');
                     }
-                });
+                }).bind({path: subpath}));
             }
         }
     }
@@ -83,18 +67,34 @@ module.exports = {
             }
 
             // Copy template to destination project if not exist
-            stat = fs.statSync(exportDir);
-            if (!stat.isDirectory()) {
-                fs.mkdirSync(exportDir);
-                copyFile(templateDir + 'template.wxml', exportDir + projectName + 'wxml');
-                copyFile(templateDir + 'template.wxss', exportDir + projectName + 'wxss');
-                copyFile(templateDir + 'template.js', exportDir + projectName + 'js');
-                copyFile(templateDir + 'cocos-weapp.js', exportDir + 'cocos-weapp.js');
-            }
+            fs.stat(exportDir, function (err, stat) {
+                if (err || !stat.isDirectory()) {
+                    fs.mkdirSync(exportDir);
+                    fse.copy(path.join(templateDir, 'template.wxml'), path.join(exportDir, projectName + '.wxml'), function () {
+                        Editor.log(projectName + '.wxml added to weapp project');
+                    });
+                    fse.copy(path.join(templateDir, 'template.wxss'), path.join(exportDir, projectName + '.wxss'), function () {
+                        Editor.log(projectName + '.wxss added to weapp project');
+                    });
+                    fse.copy(path.join(templateDir, 'template.js'), path.join(exportDir, projectName + '.js'), function () {
+                        Editor.log(projectName + '.js added to weapp project');
+                    });
+                }
+            });
+            fs.stat(path.join(exportDir, 'cocos-weapp.js'), function (err, stat) {
+                if (err || !stat.isFile()) {
+                    fse.copy(path.join(templateDir, 'cocos-weapp.js'), path.join(exportDir, 'cocos-weapp.js'), function () {
+                        Editor.log('Cocos engine installed to weapp project');
+                    });
+                }
+            });
 
             // Copy res folder
             var resDest = path.join(exportDir, 'res');
-            fse.removeSync(resDest);
+            try {
+                fse.rmrfSync(resDest);
+            }
+            catch (err) {}
             fse.copy(path.join(webMobileDir, 'res'), resDest, function (err) {
                 if (err) {
                     return Editor.error(err);
@@ -107,7 +107,10 @@ module.exports = {
 
             // Copy src folder
             var srcDest = path.join(exportDir, 'src');
-            fse.removeSync(srcDest);
+            try {
+                fse.rmrfSync(srcDest);
+            }
+            catch (err) {}
             fse.copy(path.join(webMobileDir, 'src'), srcDest, function (err) {
                 if (err) {
                     return Editor.error(err);

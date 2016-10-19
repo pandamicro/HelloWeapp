@@ -28,10 +28,10 @@ module.exports = {
         }
     ],
     "packedAssets": {
-        "e558f5f5-a98d-4181-b5b7-e58a07201db5": [
-            "2d2f792f-a40c-49bb-a189-ed176a246e49",
+        "d19beccd-5108-4aed-b70f-7685f835aa41": [
             "410fb916-8721-4663-bab8-34397391ace7",
             "31bc895a-c003-4566-a9f3-2e54ae1c17dc",
+            "2d2f792f-a40c-49bb-a189-ed176a246e49",
             "595fe010-3593-401c-b13d-38daef4edb2b"
         ]
     },
